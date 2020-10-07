@@ -467,6 +467,14 @@
       enddo
       !$OMP END PARALLEL DO
 
+
+      ! required for optional call to cleanup_itd for runtype initial
+      use ice_itd, only: cleanup_itd, kitd
+      use ice_state, only: ntrcr, nbtrcr, tr_aero, tr_pond_topo
+      use ice_zbgc_shared, only: flux_bio, first_ice
+      use ice_therm_shared, only: heat_capacity
+
+
       !-----------------------------------------------------------------
       ! Ensure ice is binned in correct categories
       ! (should not be necessary unless restarting from a run with
@@ -475,6 +483,31 @@
       ! If called, this subroutine does not give exact restart.
       !-----------------------------------------------------------------
 !!!      call cleanup_itd
+
+      if (trim(runtype) == 'initial' .and. trim(runid) == 'cpcice') then
+
+       if (my_task == master_task) &
+          write(nu_diag,*) 'CPC ice ICs: Adding call to cleanup_itd'
+
+        call cleanup_itd (dt,                   ntrcr,            &
+                          nilyr,                nslyr,            &
+                          ncat,                 hin_max,          &
+                          aicen,                trcrn(1:ntrcr,:), &
+                          vicen,                vsnon,            &
+                          aice0,                aice,             &
+                          n_aero,                                 &
+                          nbtrcr,               nblyr,            &
+                          tr_aero,                                &
+                          tr_pond_topo,         heat_capacity,    &
+                          first_ice,                              &
+                          trcr_depend,          trcr_base,        &
+                          n_trcr_strata,        nt_strata,        &
+                          fpond,                fresh,            &
+                          fsalt,                fhocn,            &
+                          faero_ocn,            l_fiso_ocn,       &
+                          fzsal,                flux_bio)
+       if (icepack_warnings_aborted(subname)) return
+      endif
 
       !-----------------------------------------------------------------
       ! compute aggregate ice state and open water area
