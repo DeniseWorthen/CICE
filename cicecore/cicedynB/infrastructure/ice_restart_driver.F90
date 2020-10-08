@@ -213,6 +213,19 @@
           aice0, aicen, vicen, vsnon, trcrn, aice_init, uvel, vvel, &
           trcr_base, nt_strata, n_trcr_strata
 
+      ! required for optional call to cleanup_itd for runtype initial
+      use ice_restart_shared, only: runtype, runid
+      use ice_domain_size, only: nblyr
+      use icepack_itd, only: cleanup_itd
+      use ice_calendar, only: dt
+      use ice_arrays_column, only: hin_max, first_ice, fzsal
+      use ice_flux, only: fsalt, fresh, fhocn 
+      use ice_state, only: aicen, vicen, vsnon, trcrn
+      use icepack_tracers, only: nbtrcr, n_aero 
+      use icepack_tracers, only: tr_pond_topo, tr_aero, tr_iso, tr_brine, nbtrcr
+      use ice_state, only: aice0 
+      use icepack_parameters, only: heat_capacity
+
       character (*), optional :: ice_ic
 
       ! local variables
@@ -467,14 +480,6 @@
       enddo
       !$OMP END PARALLEL DO
 
-
-      ! required for optional call to cleanup_itd for runtype initial
-      use ice_itd, only: cleanup_itd, kitd
-      use ice_state, only: ntrcr, nbtrcr, tr_aero, tr_pond_topo
-      use ice_zbgc_shared, only: flux_bio, first_ice
-      use ice_therm_shared, only: heat_capacity
-
-
       !-----------------------------------------------------------------
       ! Ensure ice is binned in correct categories
       ! (should not be necessary unless restarting from a run with
@@ -488,24 +493,54 @@
 
        if (my_task == master_task) &
           write(nu_diag,*) 'CPC ice ICs: Adding call to cleanup_itd'
+      do iblk = 1, nblocks
+
+      do j = 1, ny_block
+      do i = 1, nx_block
+         if (tmask(i,j,iblk)) &
 
         call cleanup_itd (dt,                   ntrcr,            &
                           nilyr,                nslyr,            &
                           ncat,                 hin_max,          &
-                          aicen,                trcrn(1:ntrcr,:), &
-                          vicen,                vsnon,            &
-                          aice0,                aice,             &
-                          n_aero,                                 &
-                          nbtrcr,               nblyr,            &
-                          tr_aero,                                &
-                          tr_pond_topo,         heat_capacity,    &
-                          first_ice,                              &
-                          trcr_depend,          trcr_base,        &
-                          n_trcr_strata,        nt_strata,        &
-                          fpond,                fresh,            &
+                          aicen = aicen(i,j,:,iblk),              &
+                          trcrn = trcrn(i,j,:,:,iblk),            &
+                          vicen = vicen(i,j,:,iblk),              &
+                          vsnon = vsnon(i,j,:,iblk),              &
+                          aice0 = aice0(i,j,  iblk),              &
+                          aice  = aice (i,j,  iblk),              &
+                          n_areo = n_aero,                        &
+                          nbtrcr = nbtrcr,   nblyr = nblyr,       &
+                          tr_aero = tr_aero,                      &
+                          tr_pond_topo = tr_pond_topo,            &
+                          heat_capacity = heat_capacity,          &
+                          first_ice = first_ice,                  &
+                          trcr_depend = trcr_depend,              &
+                          trcr_base = trcr_base,                  &
+                          n_trcr_strata = n_trcr_strata,          &
+                          nt_strata = nt_strata,                  &
+                          fpond = fpond, fresh = fresh,           &
                           fsalt,                fhocn,            &
                           faero_ocn,            l_fiso_ocn,       &
                           fzsal,                flux_bio)
+      if (icepack_warnings_aborted(subname)) return
+
+      !  call cleanup_itd (dt,                   ntrcr,            &
+      !                    nilyr,                nslyr,            &
+      !                    ncat,                 hin_max,          &
+      !                    aicen,                trcrn(1:ntrcr,:), &
+      !                    vicen,                vsnon,            &
+      !                    aice0,                aice,             &
+      !                    n_aero,                                 &
+      !                    nbtrcr,               nblyr,            &
+      !                    tr_aero,                                &
+      !                    tr_pond_topo,         heat_capacity,    &
+      !                    first_ice,                              &
+      !                    trcr_depend,          trcr_base,        &
+      !                    n_trcr_strata,        nt_strata,        &
+      !                    fpond,                fresh,            &
+      !                    fsalt,                fhocn,            &
+      !                    faero_ocn,            l_fiso_ocn,       &
+      !                    fzsal,                flux_bio)
        if (icepack_warnings_aborted(subname)) return
       endif
 
