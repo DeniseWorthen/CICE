@@ -144,7 +144,7 @@
          offset          ! d(age)/dt time offset
 
       logical (kind=log_kind) :: &
-          tr_iage, tr_FY, tr_lvl, tr_fsd, &
+          tr_iage, tr_FY, tr_lvl, tr_fsd, tr_snow, &
           tr_pond_cesm, tr_pond_lvl, tr_pond_topo, tr_brine, tr_iso, tr_aero, &
           calc_Tsfc, skl_bgc, solve_zsal, z_tracers, wave_spec
 
@@ -156,7 +156,7 @@
       call icepack_query_tracer_flags(tr_iage_out=tr_iage, tr_FY_out=tr_FY, &
            tr_lvl_out=tr_lvl, tr_pond_cesm_out=tr_pond_cesm, tr_pond_lvl_out=tr_pond_lvl, &
            tr_pond_topo_out=tr_pond_topo, tr_brine_out=tr_brine, tr_aero_out=tr_aero, &
-           tr_iso_out=tr_iso, tr_fsd_out=tr_fsd)
+           tr_iso_out=tr_iso, tr_fsd_out=tr_fsd, tr_snow_out=tr_snow)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
@@ -223,6 +223,7 @@
          call ice_timer_stop(timer_thermo) ! thermodynamics
          call ice_timer_stop(timer_column) ! column physics
 
+
       !-----------------------------------------------------------------
       ! dynamics, transport, ridging
       !-----------------------------------------------------------------
@@ -259,6 +260,17 @@
 
          call ice_timer_start(timer_column)  ! column physics
          call ice_timer_start(timer_thermo)  ! thermodynamics
+
+      !-----------------------------------------------------------------
+      ! snow redistribution and metamorphosis
+      !-----------------------------------------------------------------
+
+         if (tr_snow) then         ! advanced snow physics
+            do iblk = 1, nblocks
+               call step_snow (dt, iblk)
+            enddo
+            call update_state (dt) ! clean up
+         endif
 
 !MHRI: CHECK THIS OMP
          !$OMP PARALLEL DO PRIVATE(iblk)
@@ -312,6 +324,7 @@
             if (tr_fsd)       call write_restart_fsd
             if (tr_iso)       call write_restart_iso
             if (tr_aero)      call write_restart_aero
+            if (tr_snow)      call write_restart_snow
             if (solve_zsal .or. skl_bgc .or. z_tracers) &
                               call write_restart_bgc
             if (tr_brine)     call write_restart_hbrine
