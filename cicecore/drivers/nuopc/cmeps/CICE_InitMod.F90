@@ -147,7 +147,7 @@ contains
     call ice_HaloRestore_init ! restored boundary conditions
 
     call icepack_query_parameters(skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, &
-         wave_spec_out=wave_spec)
+         wave_spec_out=wave_spec, snw_aging_table_out=snw_aging_table)
     call icepack_warnings_flush(nu_diag)
     if (icepack_warnings_aborted()) call abort_ice(trim(subname), &
          file=__FILE__,line= __LINE__)
@@ -266,6 +266,8 @@ contains
     call icepack_query_tracer_indices(nt_alvl_out=nt_alvl, nt_vlvl_out=nt_vlvl, &
          nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd, nt_ipnd_out=nt_ipnd, &
          nt_iage_out=nt_iage, nt_FY_out=nt_FY, nt_aero_out=nt_aero, nt_fsd_out=nt_fsd, &
+         nt_smice_out=nt_smice, nt_smliq_out=nt_smliq, &
+         nt_rhos_out=nt_rhos, nt_rsnw_out=nt_rsnw, &
          nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice)
     call icepack_warnings_flush(nu_diag)
     if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
@@ -362,7 +364,6 @@ contains
           enddo ! iblk
        endif ! .not. restart_pond
     endif
-
     ! snow redistribution/metamorphism
     if (tr_snow) then
        if (trim(runtype) == 'continue') restart_snow = .true.
@@ -472,7 +473,6 @@ contains
     call icepack_warnings_flush(nu_diag)
     if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
-
   end subroutine init_restart
 
   !=======================================================================
