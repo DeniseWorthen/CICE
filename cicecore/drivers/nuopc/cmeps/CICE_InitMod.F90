@@ -8,6 +8,7 @@ module CICE_InitMod
   use icepack_intfc, only: icepack_aggregate
   use icepack_intfc, only: icepack_init_itd, icepack_init_itd_hist
   use icepack_intfc, only: icepack_init_fsd_bounds, icepack_init_wave
+  use icepack_intfc, only: icepack_init_snow
   use icepack_intfc, only: icepack_configure
   use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
   use icepack_intfc, only: icepack_query_parameters, icepack_query_tracer_flags
@@ -83,7 +84,7 @@ contains
     use ice_dyn_vp           , only: init_vp
     use ice_flux             , only: init_coupler_flux, init_history_therm
     use ice_flux             , only: init_history_dyn, init_flux_atm, init_flux_ocn
-    use ice_forcing          , only: init_forcing_ocn
+    use ice_forcing          , only: init_forcing_ocn, init_snowtable
     use ice_forcing_bgc      , only: get_forcing_bgc, get_atm_bgc
     use ice_forcing_bgc      , only: faero_default, faero_optics, alloc_forcing_bgc, fiso_default
     use ice_history          , only: init_hist, accum_hist
@@ -211,12 +212,12 @@ contains
     use ice_calendar, only: calendar
     use ice_constants, only: c0
     use ice_domain, only: nblocks
-    use ice_domain_size, only: ncat, n_iso, n_aero, nfsd
+    use ice_domain_size, only: ncat, n_iso, n_aero, nfsd, nslyr
     use ice_dyn_eap, only: read_restart_eap
     use ice_dyn_shared, only: kdyn
     use ice_grid, only: tmask
     use ice_init, only: ice_ic
-    use ice_init_column, only: init_age, init_FY, init_lvl, &
+    use ice_init_column, only: init_age, init_FY, init_lvl, init_snowtracers, &
          init_meltponds_cesm,  init_meltponds_lvl, init_meltponds_topo, &
          init_isotope, init_aerosol, init_hbrine, init_bgc, init_fsd
     use ice_restart_column, only: restart_age, read_restart_age, &
@@ -224,6 +225,7 @@ contains
          restart_pond_cesm, read_restart_pond_cesm, &
          restart_pond_lvl, read_restart_pond_lvl, &
          restart_pond_topo, read_restart_pond_topo, &
+         restart_snow, read_restart_snow, &
          restart_fsd, read_restart_fsd, &
          restart_iso, read_restart_iso, &
          restart_aero, read_restart_aero, &
@@ -244,6 +246,7 @@ contains
          ntrcr
     integer(kind=int_kind) :: &
          nt_alvl, nt_vlvl, nt_apnd, nt_hpnd, nt_ipnd, &
+         nt_smice, nt_smliq, nt_rhos, nt_rsnw, &
          nt_iage, nt_FY, nt_aero, nt_fsd, nt_isosno, nt_isoice
 
     character(len=*), parameter :: subname = '(init_restart)'

@@ -123,12 +123,13 @@
       use ice_restart_column, only: write_restart_age, write_restart_FY, &
           write_restart_lvl, write_restart_pond_cesm, write_restart_pond_lvl, &
           write_restart_pond_topo, write_restart_aero, write_restart_fsd, &
-          write_restart_iso, write_restart_bgc, write_restart_hbrine
+          write_restart_iso, write_restart_bgc, write_restart_hbrine, &
+          write_restart_snow
       use ice_restart_driver, only: dumpfile
       use ice_restoring, only: restore_ice, ice_HaloRestore
       use ice_step_mod, only: prep_radiation, step_therm1, step_therm2, &
           update_state, step_dyn_horiz, step_dyn_ridge, step_radiation, &
-          biogeochemistry, save_init, step_dyn_wave
+          biogeochemistry, save_init, step_dyn_wave, step_snow
       use ice_timers, only: ice_timer_start, ice_timer_stop, &
           timer_diags, timer_column, timer_thermo, timer_bound, &
           timer_hist, timer_readwrite
@@ -655,8 +656,6 @@
 
       end subroutine coupling_prep
 
-#ifdef CICE_IN_NEMO
-
 !=======================================================================
 !
 ! If surface heat fluxes are provided to CICE instead of CICE calculating
@@ -692,6 +691,7 @@
           fresh        , & ! fresh water flux to ocean         (kg/m2/s)
           fhocn            ! actual ocn/ice heat flx           (W/m**2)
 
+#ifdef CICE_IN_NEMO
 
       ! local variables
       integer (kind=int_kind) :: &
@@ -723,8 +723,9 @@
          enddo   ! j
       enddo      ! n
 
-      end subroutine sfcflux_to_ocn
 #endif
+
+      end subroutine sfcflux_to_ocn
 
 !=======================================================================
 
