@@ -1,4 +1,6 @@
 [submodule "icepack"]
   path = icepack
-  url = https://github.com/CICE-Consortium/Icepack
-  branch = master
+  #url = https://github.com/CICE-Consortium/Icepack
+  #branch = master
+  url = https://github.com/DeniseWorthen/Icepack
+  branch = bugfix/meltsliq

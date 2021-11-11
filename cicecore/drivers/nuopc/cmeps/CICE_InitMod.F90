@@ -364,6 +364,7 @@ contains
           enddo ! iblk
        endif ! .not. restart_pond
     endif
+
     ! snow redistribution/metamorphism
     if (tr_snow) then
        if (trim(runtype) == 'continue') restart_snow = .true.

@@ -656,6 +656,8 @@
 
       end subroutine coupling_prep
 
+#ifdef CICE_IN_NEMO
+
 !=======================================================================
 !
 ! If surface heat fluxes are provided to CICE instead of CICE calculating
@@ -691,7 +693,6 @@
           fresh        , & ! fresh water flux to ocean         (kg/m2/s)
           fhocn            ! actual ocn/ice heat flx           (W/m**2)
 
-#ifdef CICE_IN_NEMO
 
       ! local variables
       integer (kind=int_kind) :: &
@@ -723,9 +724,8 @@
          enddo   ! j
       enddo      ! n
 
-#endif
-
       end subroutine sfcflux_to_ocn
+#endif
 
 !=======================================================================
 
