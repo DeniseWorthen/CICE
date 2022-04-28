@@ -926,8 +926,10 @@ contains
     tauya(:,:,:) = c0
     tauxo(:,:,:) = c0
     tauyo(:,:,:) = c0
+    floediam(:,:,:) = c0
 
-    !$OMP PARALLEL DO PRIVATE(iblk,i,j,workx,worky, this_block, ilo, ihi, jlo, jhi)
+
+!    !$OMP PARALLEL DO PRIVATE(iblk,i,j,workx,worky, this_block, ilo, ihi, jlo, jhi, n,k,trcrn,aicen_init,floe_rad_c)
     do iblk = 1, nblocks
        this_block = get_block(blocks_ice(iblk),iblk)
        ilo = this_block%ilo
@@ -948,7 +950,6 @@ contains
              end if
 
              ! floe diameter (m)
-             floediam(i,j,iblk) = c0
              workx = c0
              worky = c0
              do n = 1, ncat
@@ -977,7 +978,7 @@ contains
           enddo
        enddo
     enddo
-    !$OMP END PARALLEL DO
+!    !$OMP END PARALLEL DO
 
     flag=.false.
     do iblk = 1, nblocks
