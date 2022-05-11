@@ -96,7 +96,6 @@
       integer (kind=int_kind), dimension(max_nstrm) :: &
          ntmp
       integer (kind=int_kind) :: nml_error ! namelist i/o error flag
-
       character (len=25) :: &
          str2D_gat, str2d_gau, str2d_gav, &  ! dimensions for t, u, v atm grid (ga)
          str2D_got, str2d_gou, str2d_gov     ! dimensions for t, u, v ocn grid (go)
