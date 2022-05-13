@@ -3,7 +3,7 @@ module ice_import_export
   use ESMF
   use NUOPC
   use NUOPC_Model
-  use ice_kinds_mod      , only : int_kind, dbl_kind, char_len, log_kind
+  use ice_kinds_mod      , only : int_kind, dbl_kind, char_len, char_len_long, log_kind
   use ice_constants      , only : c0, c1, spval_dbl, radius
   use ice_constants      , only : field_loc_center, field_type_scalar, field_type_vector
   use ice_blocks         , only : block, get_block, nx_block, ny_block
@@ -27,7 +27,7 @@ module ice_import_export
   use ice_arrays_column  , only : floe_rad_c, wave_spectrum
   use ice_state          , only : vice, vsno, aice, aicen_init, trcr, trcrn
   use ice_grid           , only : tlon, tlat, tarea, tmask, anglet, hm
-  use ice_grid           , only : grid_type, t2ugrid_vector
+  use ice_grid           , only : grid_type
   use ice_mesh_mod       , only : ocn_gridcell_frac
   use ice_boundary       , only : ice_HaloUpdate
   use ice_fileunits      , only : nu_diag, flush_fileunit
@@ -428,6 +428,7 @@ contains
     real (kind=dbl_kind), pointer    :: dataptr2d_dstdry(:,:)
     character(len=char_len)          :: tfrz_option
     integer(int_kind)                :: ktherm
+    logical(log_kind)                :: tr_fsd
     character(len=*),   parameter    :: subname = 'ice_import'
     character(len=1024)              :: msgString
     !-----------------------------------------------------
@@ -435,6 +436,7 @@ contains
     call icepack_query_parameters(Tffresh_out=Tffresh)
     call icepack_query_parameters(tfrz_option_out=tfrz_option)
     call icepack_query_parameters(ktherm_out=ktherm)
+    call icepack_query_parameters(tr_fsd_out=tr_fsd)
 
     if (io_dbug > 5) then
        write(msgString,'(A,i8)')trim(subname)//' tfrz_option = ' &
@@ -591,6 +593,7 @@ contains
           end do
        end do
     end if
+
 
     if ( State_fldChk(importState, 'Sa_ptem') .and. State_fldchk(importState,'air_density_height_lowest')) then
        !$OMP PARALLEL DO PRIVATE(iblk,i,j)
@@ -827,22 +830,9 @@ contains
 #endif
 
     call t_stopf ('cice_imp_ocn')
-
-    ! Interpolate ocean dynamics variables from T-cell centers to
-    ! U-cell centers.
-
-    if (.not.prescribed_ice) then
-       call t_startf ('cice_imp_t2u')
-       call t2ugrid_vector(uocn)
-       call t2ugrid_vector(vocn)
-       call t2ugrid_vector(ss_tltx)
-       call t2ugrid_vector(ss_tlty)
-       call t_stopf ('cice_imp_t2u')
-    end if
-
-    ! Atmosphere variables are needed in T cell centers in
-    ! subroutine stability and are interpolated to the U grid
-    ! later as necessary.
+  
+    ! Do not have to interpolate ocean quantities in the cap, but still need to
+    ! rotate.
 
     call t_startf ('cice_imp_atm')
     !$OMP PARALLEL DO PRIVATE(iblk,i,j,workx,worky)
@@ -931,7 +921,7 @@ contains
     floediam(:,:,:) = c0
 
 
-!    !$OMP PARALLEL DO PRIVATE(iblk,i,j,workx,worky, this_block, ilo, ihi, jlo, jhi, n,k,trcrn,aicen_init,floe_rad_c)
+    !$OMP PARALLEL DO PRIVATE(iblk,i,j,k,workx,worky, floe_rad_c, this_block, ilo, ihi, jlo, jhi)
     do iblk = 1, nblocks
        this_block = get_block(blocks_ice(iblk),iblk)
        ilo = this_block%ilo
@@ -944,7 +934,9 @@ contains
              ! ice fraction
              ailohi(i,j,iblk) = min(aice(i,j,iblk), c1)
 
-             ! ice thickness (m)
+             if (tr_fsd) then
+
+             ! floe thickness (m)
              if (aice(i,j,iblk) > puny) then
                 floethick(i,j,iblk) = vice(i,j,iblk) / aice(i,j,iblk)
              else
@@ -952,6 +944,7 @@ contains
              end if
 
              ! floe diameter (m)
+             floediam(i,j,iblk) = c0
              workx = c0
              worky = c0
              do n = 1, ncat
@@ -962,6 +955,8 @@ contains
              end do
              if (worky > c0) workx = c2*workx / worky
              floediam(i,j,iblk) = MAX(c2*floe_rad_c(1),workx)
+
+             endif
 
              ! surface temperature
              Tsrf(i,j,iblk)  = Tffresh + trcr(i,j,1,iblk)     !Kelvin (original ???)
