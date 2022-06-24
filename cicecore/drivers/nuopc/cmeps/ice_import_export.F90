@@ -828,9 +828,22 @@ contains
 #endif
 
     call t_stopf ('cice_imp_ocn')
-  
-    ! Do not have to interpolate ocean quantities in the cap, but still need to
-    ! rotate.
+
+    ! Interpolate ocean dynamics variables from T-cell centers to
+    ! U-cell centers.
+
+    if (.not.prescribed_ice) then
+       call t_startf ('cice_imp_t2u')
+       call ice_HaloUpdate(uocn, halo_info, field_loc_center, field_type_vector)
+       call ice_HaloUpdate(vocn, halo_info, field_loc_center, field_type_vector)
+       call ice_HaloUpdate(ss_tltx, halo_info, field_loc_center, field_type_vector)
+       call ice_HaloUpdate(ss_tlty, halo_info, field_loc_center, field_type_vector)
+       call t_stopf ('cice_imp_t2u')
+    end if
+
+    ! Atmosphere variables are needed in T cell centers in
+    ! subroutine stability and are interpolated to the U grid
+    ! later as necessary.
 
     call t_startf ('cice_imp_atm')
     !$OMP PARALLEL DO PRIVATE(iblk,i,j,workx,worky)
