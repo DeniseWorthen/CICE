@@ -35,7 +35,6 @@ contains
     use ice_grid          , only: init_grid1, alloc_grid
     use ice_domain        , only: init_domain_blocks
     use ice_arrays_column , only: alloc_arrays_column
-    use ice_arrays_column , only: wavefreq, dwavefreq, wave_spectrum
     use ice_state         , only: alloc_state
     use ice_dyn_shared    , only: alloc_dyn_shared
     use ice_flux_bgc      , only: alloc_flux_bgc
