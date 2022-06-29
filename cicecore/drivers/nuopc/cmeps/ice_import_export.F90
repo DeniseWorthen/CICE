@@ -987,7 +987,7 @@ contains
           enddo
        enddo
     enddo
-!    !$OMP END PARALLEL DO
+    !$OMP END PARALLEL DO
 
     flag=.false.
     do iblk = 1, nblocks
