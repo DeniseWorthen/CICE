@@ -75,7 +75,6 @@ contains
 
     use ice_arrays_column    , only: hin_max, c_hi_range
     use ice_arrays_column    , only: floe_rad_l, floe_rad_c, floe_binwidth, c_fsd_range
-    use ice_arrays_column    , only: wavefreq, dwavefreq, wave_spectrum
     use ice_calendar         , only: dt, dt_dyn, istep, istep1, write_ic, init_calendar, calendar
     use ice_communicate      , only: my_task, master_task
     use ice_diagnostics      , only: init_diags

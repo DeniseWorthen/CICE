@@ -896,7 +896,7 @@ contains
     real    (kind=dbl_kind) :: floediam(nx_block,ny_block,max_blocks)
     real    (kind=dbl_kind) :: floethick(nx_block,ny_block,max_blocks) ! ice thickness
     real    (kind=dbl_kind) :: Tffresh
-    logical(log_kind)       :: tr_fsd
+    logical (kind=log_kind) :: tr_fsd
     integer (kind=int_kind) :: nt_fsd
     real    (kind=dbl_kind), allocatable :: tempfld(:,:,:)
     real    (kind=dbl_kind), pointer :: dataptr_ifrac_n(:,:)
