@@ -181,7 +181,7 @@
          trcr_base(ntrcr,3)   , & ! = 0 or 1 depending on tracer dependency, (1) aice, (2) vice, (3) vsno
          stat=ierr)
       if (ierr/=0) call abort_ice('(alloc_state): Out of memory2')
- 
+
       trcr_depend = 0
       n_trcr_strata = 0
       nt_strata = 0
