@@ -11,7 +11,7 @@ module ice_import_export
   use ice_domain_size    , only : nx_global, ny_global, block_size_x, block_size_y, max_blocks, ncat
   use ice_domain_size    , only : nfreq, nfsd
   use ice_exit           , only : abort_ice
-  use ice_flux           , only : strairxt, strairyt, strocnxt, strocnyt
+  use ice_flux           , only : strairxT, strairyT, strocnxT, strocnyT
   use ice_flux           , only : alvdr, alidr, alvdf, alidf, Tref, Qref, Uref
   use ice_flux           , only : flat, fsens, flwout, evap, fswabs, fhocn, fswthru
   use ice_flux           , only : fswthru_vdr, fswthru_vdf, fswthru_idr, fswthru_idf
