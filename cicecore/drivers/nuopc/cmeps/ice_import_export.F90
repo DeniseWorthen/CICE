@@ -116,6 +116,7 @@ contains
     character(char_len) :: stdname
     character(char_len) :: cvalue
     logical             :: flds_wiso         ! use case
+    logical             :: flds_wave         ! use case
     logical             :: isPresent, isSet
     character(len=*), parameter :: subname='(ice_import_export:ice_advertise_fields)'
     !-------------------------------------------------------------------------------
@@ -150,6 +151,17 @@ contains
     end if
     if (my_task == master_task) then
        write(nu_diag,*)'flds_wiso = ',flds_wiso
+    end if
+
+    flds_wave = .false.
+    call NUOPC_CompAttributeGet(gcomp, name='wav_coupling_to_cice', value=cvalue, &
+         isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    if (isPresent .and. isSet) then
+       read(cvalue,*) flds_wave
+    end if
+    if (my_task == master_task) then
+       write(nu_diag,*)'flds_wave = ',flds_wave
     end if
 
     !-----------------
@@ -199,7 +211,10 @@ contains
     ! the following are advertised but might not be connected if they are not advertised in the
     ! in the cmeps esmFldsExchange_xxx_mod.F90 that is model specific
     ! from wave
-    call fldlist_add(fldsToIce_num, fldsToIce, 'Sw_elevation_spectrum', ungridded_lbound=1, ungridded_ubound=25)
+    if (flds_wave) then
+       call fldlist_add(fldsToIce_num, fldsToIce, 'Sw_elevation_spectrum', ungridded_lbound=1, &
+            ungridded_ubound=25)
+    end if
 
     do n = 1,fldsToIce_num
        call NUOPC_Advertise(importState, standardName=fldsToIce(n)%stdname, &
@@ -223,8 +238,6 @@ contains
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_qref'                     )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_snowh'                    )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_u10'                      )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_thick'                    )
-    call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_floediam'                 )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'inst_ice_vis_dir_albedo'     )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'inst_ice_ir_dir_albedo'      )
     call fldlist_add(fldsFrIce_num, fldsFrIce, 'inst_ice_vis_dif_albedo'     )
@@ -235,6 +248,10 @@ contains
     if (send_i2x_per_cat) then
        call fldlist_add(fldsFrIce_num, fldsFrIce, 'ice_fraction_n', &
             ungridded_lbound=1, ungridded_ubound=ncat)
+    end if
+    if (flds_wave) then
+       call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_thick'                 )
+       call fldlist_add(fldsFrIce_num, fldsFrIce, 'Si_floediam'              )
     end if
 
     ! ice/atm fluxes computed by ice
@@ -592,7 +609,6 @@ contains
        end do
     end if
 
-
     if ( State_fldChk(importState, 'Sa_ptem') .and. State_fldchk(importState,'air_density_height_lowest')) then
        !$OMP PARALLEL DO PRIVATE(iblk,i,j)
        do iblk = 1, nblocks
@@ -879,7 +895,7 @@ contains
 
     ! local variables
     type(block)             :: this_block                           ! block information for current block
-    integer                 :: i, j, iblk, n, k                     ! incides
+    integer                 :: i, j, iblk, n, k                     ! indices
     integer                 :: n2                                   ! thickness category index
     integer                 :: ilo, ihi, jlo, jhi                   ! beginning and end of physical domain
     real    (kind=dbl_kind) :: workx, worky                         ! tmps for converting grid
@@ -948,26 +964,24 @@ contains
              ailohi(i,j,iblk) = min(aice(i,j,iblk), c1)
 
              if (tr_fsd) then
+                ! floe thickness (m)
+                if (aice(i,j,iblk) > puny) then
+                   floethick(i,j,iblk) = vice(i,j,iblk) / aice(i,j,iblk)
+                else
+                   floethick(i,j,iblk) = c0
+                end if
 
-             ! floe thickness (m)
-             if (aice(i,j,iblk) > puny) then
-                floethick(i,j,iblk) = vice(i,j,iblk) / aice(i,j,iblk)
-             else
-                floethick(i,j,iblk) = c0
-             end if
-
-             ! floe diameter (m)
-             workx = c0
-             worky = c0
-             do n = 1, ncat
-                do k = 1, nfsd
-                   workx = workx + floe_rad_c(k) * aicen_init(i,j,n,iblk) * trcrn(i,j,nt_fsd+k-1,n,iblk)
-                   worky = worky + aicen_init(i,j,n,iblk) * trcrn(i,j,nt_fsd+k-1,n,iblk)
+                ! floe diameter (m)
+                workx = c0
+                worky = c0
+                do n = 1, ncat
+                   do k = 1, nfsd
+                      workx = workx + floe_rad_c(k) * aicen_init(i,j,n,iblk) * trcrn(i,j,nt_fsd+k-1,n,iblk)
+                      worky = worky + aicen_init(i,j,n,iblk) * trcrn(i,j,nt_fsd+k-1,n,iblk)
+                   end do
                 end do
-             end do
-             if (worky > c0) workx = c2*workx / worky
-             floediam(i,j,iblk) = MAX(c2*floe_rad_c(1),workx)
-
+                if (worky > c0) workx = c2*workx / worky
+                floediam(i,j,iblk) = MAX(c2*floe_rad_c(1),workx)
              endif
 
              ! surface temperature
@@ -1094,14 +1108,6 @@ contains
     call state_setexport(exportState, 'Si_qref' , input=Qref , lmask=tmask, ifrac=ailohi, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    ! Sea ice thickness (m)
-    call state_setexport(exportState, 'Si_thick' , input=floethick , lmask=tmask, ifrac=ailohi, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    ! Sea ice floe diameter (m)
-    call state_setexport(exportState, 'Si_floediam' , input=floediam , lmask=tmask, ifrac=ailohi, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
     ! Snow volume
     call state_setexport(exportState, 'mean_snow_volume' , input=vsno , lmask=tmask, ifrac=ailohi, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -1127,6 +1133,22 @@ contains
     end do
     call state_setexport(exportState, 'Si_snowh' , input=tempfld , lmask=tmask, ifrac=ailohi, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    ! ------
+    ! optional floe diameter and ice thickness to wave
+    ! ------
+
+    ! Sea ice thickness (m)
+    if (State_FldChk(exportState, 'Si_thick')) then
+       call state_setexport(exportState, 'Si_thick' , input=floethick , lmask=tmask, ifrac=ailohi, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    end if
+
+    ! Sea ice floe diameter (m)
+    if (State_FldChk(exportState, 'Si_floediam')) then
+       call state_setexport(exportState, 'Si_floediam' , input=floediam , lmask=tmask, ifrac=ailohi, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    end if
 
     ! ------
     ! ice/atm fluxes computed by ice
