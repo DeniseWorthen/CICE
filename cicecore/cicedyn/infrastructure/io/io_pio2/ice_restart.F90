@@ -14,6 +14,7 @@
           restart, restart_ext, restart_dir, restart_file, pointer_file, &
           runid, runtype, use_restart_time, restart_format, lcdf64, lenstr, &
           restart_coszen
+      use ice_history_shared, only: pio_options
       use ice_pio
       use pio
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
@@ -57,8 +58,6 @@
 
       integer (kind=int_kind) :: status, status1
 
-      integer (kind=int_kind) :: iotype
-
       character(len=*), parameter :: subname = '(init_restart_read)'
 
       if (present(ice_ic)) then
@@ -78,14 +77,12 @@
          write(nu_diag,*) 'Using restart dump=', trim(filename)
       end if
 
-!     if (restart_format(1:3) == 'pio') then
-         iotype = PIO_IOTYPE_NETCDF
-         if (restart_format == 'pio_pnetcdf') iotype = PIO_IOTYPE_PNETCDF
+      !if (restart_format(1:3) == 'pio') then
          File%fh=-1
-         call ice_pio_init(mode='read', filename=trim(filename), File=File, iotype=iotype)
-
+         call pio_setdebuglevel(6)
+         call ice_pio_init(pio_options, mode='read', filename=trim(filename), File=File)
          call ice_pio_initdecomp(iodesc=iodesc2d, precision=8)
-         call ice_pio_initdecomp(ndim3=ncat  , iodesc=iodesc3d_ncat,remap=.true., precision=8)
+         call ice_pio_initdecomp(ndim3=ncat, iodesc=iodesc3d_ncat, remap=.true., precision=8)
 
          if (use_restart_time) then
             status1 = PIO_noerr
@@ -108,7 +105,7 @@
                call abort_ice(subname//"ERROR: reading restart time ")
             call pio_seterrorhandling(File, PIO_INTERNAL_ERROR)
          endif ! use namelist values if use_restart_time = F
-!     endif
+!      endif
 
       if (my_task == master_task) then
          write(nu_diag,*) 'Restart read at istep=',istep0,myear,mmonth,mday,msec
@@ -174,7 +171,6 @@
 
       integer (kind=int_kind), allocatable :: dims(:)
 
-      integer (kind=int_kind) :: iotype
 
       integer (kind=int_kind) :: &
         k,    n,    & ! loop index
@@ -222,12 +218,9 @@
       endif
 
 !     if (restart_format(1:3) == 'pio') then
-
-         iotype = PIO_IOTYPE_NETCDF
-         if (restart_format == 'pio_pnetcdf') iotype = PIO_IOTYPE_PNETCDF
          File%fh=-1
-         call ice_pio_init(mode='write',filename=trim(filename), File=File, &
-              clobber=.true., cdf64=lcdf64, iotype=iotype)
+         call ice_pio_init(pio_options, mode='write',filename=trim(filename), File=File, &
+              clobber=.true., cdf64=lcdf64)
 
          status = pio_put_att(File,pio_global,'istep1',istep1)
 !         status = pio_put_att(File,pio_global,'time',time)
@@ -661,7 +654,7 @@
          status = pio_enddef(File)
 
          call ice_pio_initdecomp(iodesc=iodesc2d, precision=8)
-         call ice_pio_initdecomp(ndim3=ncat  , iodesc=iodesc3d_ncat, remap=.true., precision=8)
+         call ice_pio_initdecomp(ndim3=ncat, iodesc=iodesc3d_ncat, remap=.true., precision=8)
 
 !     endif  ! restart_format
 
@@ -720,6 +713,8 @@
       character(len=*), parameter :: subname = '(read_restart_field)'
 
 !     if (restart_format(1:3) == "pio") then
+      call pio_setdebuglevel(6)
+
          if (my_task == master_task) &
             write(nu_diag,*)'Parallel restart file read: ',vname
 
@@ -733,7 +728,6 @@
          endif
 
          status = pio_inq_varndims(File, vardesc, ndims)
-
          call pio_seterrorhandling(File, PIO_INTERNAL_ERROR)
 
 !         if (ndim3 == ncat .and. ncat>1) then

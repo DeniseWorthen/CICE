@@ -25,7 +25,7 @@
 
       use ice_kinds_mod
       use ice_communicate, only: my_task, master_task
-      use ice_domain_size, only: max_nstrm
+      use ice_domain_size, only: max_nstrm, npio_opts
       use ice_exit, only: abort_ice
       use ice_fileunits, only: nu_diag
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
@@ -56,6 +56,9 @@
 
       character (len=char_len), public :: &
          history_format
+
+      character (len=char_len), public :: &
+         pio_options(npio_opts)
 
       !---------------------------------------------------------------
       ! Instructions for adding a field: (search for 'example')

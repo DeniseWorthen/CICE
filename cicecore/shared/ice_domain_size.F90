@@ -47,6 +47,9 @@
       integer (kind=int_kind), public, parameter :: &
         max_nstrm =   5           ! max number of history output streams
 
+      integer (kind=int_kind), public, parameter :: &
+        npio_opts =   4           ! number of pio optional settings
+
    !*** The model will inform the user of the correct
    !*** values for the parameter below.  A value higher than
    !*** necessary will not cause the code to fail, but will

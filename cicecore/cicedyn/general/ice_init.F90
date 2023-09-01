@@ -66,7 +66,7 @@
       use ice_domain_size, only: ncat, nilyr, nslyr, nblyr, nfsd, nfreq, &
                                  n_iso, n_aero, n_zaero, n_algae, &
                                  n_doc, n_dic, n_don, n_fed, n_fep, &
-                                 max_nstrm
+                                 max_nstrm, npio_opts
       use ice_calendar, only: year_init, month_init, day_init, sec_init, &
                               istep0, histfreq, histfreq_n, histfreq_base, &
                               dumpfreq, dumpfreq_n, diagfreq, dumpfreq_base, &
@@ -81,7 +81,7 @@
           runid, runtype, use_restart_time, restart_format, lcdf64
       use ice_history_shared, only: hist_avg, history_dir, history_file, &
                              incond_dir, incond_file, version_name, &
-                             history_precision, history_format, hist_time_axis
+                             history_precision, history_format, hist_time_axis, pio_options
       use ice_flux, only: update_ocn_f, l_mpond_fresh
       use ice_flux, only: default_season
       use ice_flux_bgc, only: cpl_bgc
@@ -185,7 +185,7 @@
         restart_ext,    use_restart_time, restart_format, lcdf64,       &
         pointer_file,   dumpfreq,       dumpfreq_n,      dump_last,     &
         diagfreq,       diag_type,      diag_file,       history_format,&
-        hist_time_axis,                                                 &
+        hist_time_axis, pio_options,                                    &
         print_global,   print_points,   latpnt,          lonpnt,        &
         debug_forcing,  histfreq,       histfreq_n,      hist_avg,      &
         history_dir,    history_file,   history_precision, cpl_bgc,     &
@@ -325,6 +325,7 @@
       histfreq_base = 'zero' ! output frequency reference date
       hist_avg(:) = .true.   ! if true, write time-averages (not snapshots)
       history_format = 'default' ! history file format
+      pio_options(:) = '-99' ! default no pio
       hist_time_axis = 'end' ! History file time axis averaging interval position
 
       history_dir  = './'    ! write to executable dir for default
@@ -910,6 +911,9 @@
       call broadcast_scalar(history_precision,    master_task)
       call broadcast_scalar(history_format,       master_task)
       call broadcast_scalar(hist_time_axis,       master_task)
+      do n = 1,npio_opts
+         call broadcast_scalar(pio_options(n),   master_task)
+      enddo
       call broadcast_scalar(write_ic,             master_task)
       call broadcast_scalar(cpl_bgc,              master_task)
       call broadcast_scalar(incond_dir,           master_task)
@@ -2325,6 +2329,7 @@
          write(nu_diag,1031) ' history_file     = ', trim(history_file)
          write(nu_diag,1021) ' history_precision= ', history_precision
          write(nu_diag,1031) ' history_format   = ', trim(history_format)
+         write(nu_diag,1031) ' pio_options      = ', pio_options(:)
          write(nu_diag,1031) ' hist_time_axis   = ', trim(hist_time_axis)
          if (write_ic) then
             write(nu_diag,1039) ' Initial condition will be written in ', &

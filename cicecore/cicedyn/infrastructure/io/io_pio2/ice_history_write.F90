@@ -78,7 +78,6 @@
       character (char_len) :: title
       character (char_len) :: time_period_freq = 'none'
       character (char_len_long) :: ncfile(max_nstrm)
-      integer (kind=int_kind) :: iotype
 
       integer (kind=int_kind) :: icategory,ind,i_aice,boundid
 
@@ -92,6 +91,7 @@
                                iodesc3df, &
                                iodesc4di, iodesc4ds, iodesc4df
       type(var_desc_t)      :: varid
+
 
       ! 8 coordinate variables: TLON, TLAT, ULON, ULAT, NLON, NLAT, ELON, ELAT
       INTEGER (kind=int_kind), PARAMETER :: ncoord = 8
@@ -167,12 +167,9 @@
       call broadcast_scalar(filename, master_task)
 
       ! create file
-
-      iotype = PIO_IOTYPE_NETCDF
-      if (history_format == 'pio_pnetcdf') iotype = PIO_IOTYPE_PNETCDF
       File%fh=-1
-      call ice_pio_init(mode='write', filename=trim(filename), File=File, &
-        clobber=.true., cdf64=lcdf64, iotype=iotype)
+      call ice_pio_init(pio_options, mode='write', filename=trim(filename), File=File, &
+        clobber=.true., cdf64=lcdf64)
 
       call ice_pio_initdecomp(iodesc=iodesc2d, precision=history_precision)
       call ice_pio_initdecomp(ndim3=ncat_hist, iodesc=iodesc3dc, precision=history_precision)
@@ -691,11 +688,11 @@
                 a,'-',a,'-',a,' at ',a,':',a)
         status = pio_put_att(File,pio_global,'history',trim(start_time))
 
-        if (history_format == 'pio_pnetcdf') then
-           status = pio_put_att(File,pio_global,'io_flavor','io_pio pnetcdf')
-        else
+        if (trim(pio_options(1)) == '-99' .or. trim(pio_options(1)) == 'netcdf') then
            status = pio_put_att(File,pio_global,'io_flavor','io_pio netcdf')
-        endif
+        else
+           status = pio_put_att(File,pio_global,'io_flavor','io_pio '//trim(pio_options(1)))
+        end if
 
       !-----------------------------------------------------------------
       ! end define mode
