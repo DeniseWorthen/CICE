@@ -79,7 +79,6 @@
 
       !if (restart_format(1:3) == 'pio') then
          File%fh=-1
-         call pio_setdebuglevel(6)
          call ice_pio_init(pio_options, mode='read', filename=trim(filename), File=File)
          call ice_pio_initdecomp(iodesc=iodesc2d, precision=8)
          call ice_pio_initdecomp(ndim3=ncat, iodesc=iodesc3d_ncat, remap=.true., precision=8)
@@ -713,7 +712,6 @@
       character(len=*), parameter :: subname = '(read_restart_field)'
 
 !     if (restart_format(1:3) == "pio") then
-      call pio_setdebuglevel(6)
 
          if (my_task == master_task) &
             write(nu_diag,*)'Parallel restart file read: ',vname

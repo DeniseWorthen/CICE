@@ -45,232 +45,240 @@
    subroutine ice_pio_init(pio_options, mode, filename, File, clobber, cdf64)
 
 #ifdef CESMCOUPLED
-   use shr_pio_mod, only: shr_pio_getiosys, shr_pio_getiotype
+     use shr_pio_mod, only: shr_pio_getiosys, shr_pio_getiotype
 #else
 #ifdef GPTL
-   use perf_mod, only : t_initf
+     use perf_mod, only : t_initf
 #endif
 #endif
 
-   implicit none
-   character(len=*)  , intent(in)              :: pio_options(:)  ! pio namelist options
-   character(len=*)  , intent(in),    optional :: mode
-   character(len=*)  , intent(in),    optional :: filename
-   type(file_desc_t) , intent(inout), optional :: File
-   logical           , intent(in),    optional :: clobber
-   logical           , intent(in),    optional :: cdf64
-   ! local variables
+     implicit none
+     character(len=*)  , intent(in)              :: pio_options(:)  ! pio namelist options
+     character(len=*)  , intent(in),    optional :: mode
+     character(len=*)  , intent(in),    optional :: filename
+     type(file_desc_t) , intent(inout), optional :: File
+     logical           , intent(in),    optional :: clobber
+     logical           , intent(in),    optional :: cdf64
+     ! local variables
 
-   integer (int_kind) :: &
-      nml_error          ! namelist read error flag
+     integer (int_kind) :: &
+          nml_error          ! namelist read error flag
 
-   integer :: nprocs
-   integer :: iostride
-   integer :: basetask
-   integer :: numiotasks
-   integer :: rearranger
-   integer :: iotype
-   logical :: exists
-   logical :: lclobber
-   logical :: lcdf64
-   integer :: status
-   integer :: nmode
-   character(len=*), parameter :: subname = '(ice_pio_init)'
+     integer :: nprocs
+     integer :: iostride
+     integer :: basetask
+     integer :: numiotasks
+     integer :: rearranger
+     integer :: iotype
+     logical :: exists
+     logical :: lclobber
+     logical :: lcdf64
+     integer :: status
+     integer :: nmode
+     character(len=*), parameter :: subname = '(ice_pio_init)'
 
 #ifdef CESMCOUPLED
-   ice_pio_subsystem => shr_pio_getiosys(inst_name)
-   iotype =  shr_pio_getiotype(inst_name)
+     ice_pio_subsystem => shr_pio_getiosys(inst_name)
+     iotype =  shr_pio_getiotype(inst_name)
 #else
 
 #ifdef GPTL
-   !--- initialize gptl
-   call t_initf('undefined_NLFileName', LogPrint=.false., mpicom=MPI_COMM_ICE, &
-         MasterTask=.true.)
+     !--- initialize gptl
+     call t_initf('undefined_NLFileName', LogPrint=.false., mpicom=MPI_COMM_ICE, &
+          MasterTask=.true.)
 #endif
-   nprocs = get_num_procs()
-   basetask = min(1,nprocs-1)
+     nprocs = get_num_procs()
+     basetask = min(1,nprocs-1)
 
-   if ((trim(pio_options(1)) == '-99') .or. (trim(pio_options(1)) == 'netcdf')) then
-      iotype = PIO_IOTYPE_NETCDF
-   else if (trim(pio_options(1)) == 'pnetcdf') then
-      iotype = PIO_IOTYPE_PNETCDF
-   else if (trim(pio_options(1)) == 'netcdf4c') then
-      iotype = PIO_IOTYPE_NETCDF4C
-   else if (trim(pio_options(1)) == 'netcdf4p') then
-      iotype = PIO_IOTYPE_NETCDF4P
-   else
-      if (my_task == master_task) then
-         write(nu_diag,'(a)') ' no valid iotype set'
-      end if
-      call abort_ice(subname//'ERROR: aborting with no valid iotype')
-      return
-   end if
+     if ((trim(pio_options(1)) == '-99') .or. (trim(pio_options(1)) == 'netcdf')) then
+        iotype = PIO_IOTYPE_NETCDF
+     else if (trim(pio_options(1)) == 'pnetcdf') then
+        iotype = PIO_IOTYPE_PNETCDF
+     else if (trim(pio_options(1)) == 'netcdf4c') then
+        iotype = PIO_IOTYPE_NETCDF4C
+     else if (trim(pio_options(1)) == 'netcdf4p') then
+        iotype = PIO_IOTYPE_NETCDF4P
+     else
+        if (my_task == master_task) then
+           write(nu_diag,'(a)') ' no valid iotype set'
+        end if
+        call abort_ice(subname//'ERROR: aborting with no valid iotype')
+        return
+     end if
 
-    if ((trim(pio_options(2)) == '-99') .or. (trim(pio_options(2)) == 'box')) then
-       rearranger = PIO_REARR_BOX
-    else if (trim(pio_options(2)) == 'subset') then
-       rearranger = PIO_REARR_SUBSET
-    else
-       if (my_task == master_task) then
-          write(nu_diag,'(a)') ' no valid pio_rearranger set'
-       end if
-       call abort_ice(subname//'ERROR: aborting with no valid pio_rearranger')
-       return
-    end if
+     if ((trim(pio_options(2)) == '-99') .or. (trim(pio_options(2)) == 'box')) then
+        rearranger = PIO_REARR_BOX
+     else if (trim(pio_options(2)) == 'subset') then
+        rearranger = PIO_REARR_SUBSET
+     else
+        if (my_task == master_task) then
+           write(nu_diag,'(a)') ' no valid pio_rearranger set'
+        end if
+        call abort_ice(subname//'ERROR: aborting with no valid pio_rearranger')
+        return
+     end if
 
-   if (trim(pio_options(3)) == '-99') then
-      iostride = -99
-   else
-      read(pio_options(3),*)iostride
-   end if
+     ! force box rearranger on restart read to avoid some stride+subset combinations
+     if (present(mode)) then
+        if (trim(mode) == 'read') then
+           rearranger = PIO_REARR_BOX
+           if (my_task == master_task) then
+              write(nu_diag,'(a)') 'WARNING: Rearranger forced to BOX for restart read'
+           end if
+        end if
+     end if
 
-   if (trim(pio_options(4)) == '-99') then
-      numiotasks = -99
-   else
-      read(pio_options(4),*)numiotasks
-   end if
+     if (trim(pio_options(3)) == '-99') then
+        iostride = -99
+     else
+        read(pio_options(3),*)iostride
+     end if
 
-   ! check for parallel IO, it requires at least two io pes
-   if (nprocs > 1 .and. numiotasks == 1 .and. &
-        (iotype .eq. PIO_IOTYPE_PNETCDF .or. iotype .eq. PIO_IOTYPE_NETCDF4P)) then
-      numiotasks = 2
-      iostride = min(iostride, nprocs/2)
-      if (my_task == master_task) then
-         write(nu_diag,*) ' parallel io requires at least two io pes - following parameters are updated:'
-         write(nu_diag,*) trim(subname), ' : iostride = ', iostride
-         write(nu_diag,*) trim(subname), ' : numiotasks = ', numiotasks
-      end if
-   endif
+     if (trim(pio_options(4)) == '-99') then
+        numiotasks = -99
+     else
+        read(pio_options(4),*)numiotasks
+     end if
 
-   ! check/set/correct io pio parameters
-   if (iostride > 0 .and. numiotasks < 0) then
-      numiotasks = max(1, nprocs/iostride)
-      if (my_task == master_task ) write(nu_diag,*) trim(subname), ' : update numiotasks = ', numiotasks
-    else if(numiotasks > 0 .and. iostride < 0) then
-       iostride = max(1, nprocs/numiotasks)
-       if (my_task == master_task) write(nu_diag,*) trim(subname), ' : update iostride = ', iostride
-    else if(numiotasks < 0 .and. iostride < 0) then
-       iostride = max(1,nprocs/4)
-       numiotasks = max(1,nprocs/iostride)
-       if (my_task == master_task) write(nu_diag,*) trim(subname), ' : update numiotasks = ', numiotasks
-       if (my_task == master_task) write(nu_diag,*) trim(subname), ' : update iostride = ', iostride
-    end if
+     ! check for parallel IO, it requires at least two io pes
+     if (nprocs > 1 .and. numiotasks == 1 .and. &
+          (iotype .eq. PIO_IOTYPE_PNETCDF .or. iotype .eq. PIO_IOTYPE_NETCDF4P)) then
+        numiotasks = 2
+        iostride = min(iostride, nprocs/2)
+        if (my_task == master_task) then
+           write(nu_diag,*) ' parallel io requires at least two io pes - following parameters are updated:'
+           write(nu_diag,*) trim(subname), ' : iostride = ', iostride
+           write(nu_diag,*) trim(subname), ' : numiotasks = ', numiotasks
+        end if
+     endif
 
-    if (basetask + (iostride)*(numiotasks-1) >= nprocs ) then
-       if (nprocs < 100) then
-          iostride = max(1, nprocs/4)
-       else if(nprocs < 1000) then
-          iostride = max(1, nprocs/8)
-       else
-          iostride = max(1, nprocs/16)
-       end if
-       if(iostride > 1) then
-          numiotasks = nprocs/iostride
-          basetask = min(1, nprocs-1)
-       else
-          numiotasks = nprocs
-          basetask = 0
-       end if
-       if (my_task == master_task) then
-          write(nu_diag,*) 'iostride, iotasks or root out of bounds - resetting to defaults:'
-          write(nu_diag,*) trim(subname), ' : basetask = ', basetask
-          write(nu_diag,*) trim(subname), ' : iostride = ', iostride
-          write(nu_diag,*) trim(subname), ' : numiotasks = ', numiotasks
-       end if
-    end if
+     ! check/set/correct io pio parameters
+     if (iostride > 0 .and. numiotasks < 0) then
+        numiotasks = max(1, nprocs/iostride)
+        if (my_task == master_task ) write(nu_diag,*) trim(subname), ' : update numiotasks = ', numiotasks
+     else if(numiotasks > 0 .and. iostride < 0) then
+        iostride = max(1, nprocs/numiotasks)
+        if (my_task == master_task) write(nu_diag,*) trim(subname), ' : update iostride = ', iostride
+     else if(numiotasks < 0 .and. iostride < 0) then
+        iostride = max(1,nprocs/4)
+        numiotasks = max(1,nprocs/iostride)
+        if (my_task == master_task) write(nu_diag,*) trim(subname), ' : update numiotasks = ', numiotasks
+        if (my_task == master_task) write(nu_diag,*) trim(subname), ' : update iostride = ', iostride
+     end if
 
-    if (my_task == master_task) then
-       write(nu_diag,'(a,a,i6)') subname,' nprocs     = ',nprocs
-       write(nu_diag,'(a,a,i6)') subname,' iostride   = ',iostride
-       write(nu_diag,'(a,a,i6)') subname,' root       = ',basetask
-       write(nu_diag,'(a,a,i6)') subname,' numiotasks = ',numiotasks
-       write(nu_diag,'(a,a,i6,a)') subname,' iotype = ',iotype,' [PNETCDF| NETCDF | NETCDF4C | NETCDF4P]'
-       write(nu_diag,'(a,a,i6,a)') subname,' rearranger = ',rearranger,' [BOX | SUBSET]'
-    end if
-    ! set PIO debug level
-    call pio_setdebuglevel(6)
+     if (basetask + (iostride)*(numiotasks-1) >= nprocs ) then
+        if (nprocs < 100) then
+           iostride = max(1, nprocs/4)
+        else if(nprocs < 1000) then
+           iostride = max(1, nprocs/8)
+        else
+           iostride = max(1, nprocs/16)
+        end if
+        if(iostride > 1) then
+           numiotasks = nprocs/iostride
+           basetask = min(1, nprocs-1)
+        else
+           numiotasks = nprocs
+           basetask = 0
+        end if
+        if (my_task == master_task) then
+           write(nu_diag,*) 'iostride, iotasks or root out of bounds - resetting to defaults:'
+           write(nu_diag,*) trim(subname), ' : basetask = ', basetask
+           write(nu_diag,*) trim(subname), ' : iostride = ', iostride
+           write(nu_diag,*) trim(subname), ' : numiotasks = ', numiotasks
+        end if
+     end if
 
-    call pio_init(my_task, MPI_COMM_ICE, numiotasks, master_task, iostride, rearranger, &
-                  ice_pio_subsystem, base=basetask)
+     if (my_task == master_task) then
+        write(nu_diag,'(a,a,i6)') subname,' nprocs     = ',nprocs
+        write(nu_diag,'(a,a,i6)') subname,' iostride   = ',iostride
+        write(nu_diag,'(a,a,i6)') subname,' root       = ',basetask
+        write(nu_diag,'(a,a,i6)') subname,' numiotasks = ',numiotasks
+        write(nu_diag,'(a,a,i6,a)') subname,' iotype = ',iotype,' [PNETCDF| NETCDF | NETCDF4C | NETCDF4P]'
+        write(nu_diag,'(a,a,i6,a)') subname,' rearranger = ',rearranger,' [BOX | SUBSET]'
+     end if
 
-   ! TODO
-   !--- initialize rearranger options
-   ! rearranger defaults
-   ! pio_rearr_comm_type = PIO_REARR_COMM_P2P
-   ! pio_rearr_comm_fcd = PIO_REARR_COMM_FC_2D_ENABLE
-   ! pio_rearr_comm_enable_hs_comp2io = .true.
-   ! pio_rearr_comm_enable_isend_comp2io = .false.
-   ! pio_rearr_comm_max_pend_req_comp2io = 0
-   ! pio_rearr_comm_enable_hs_io2comp = .false.
-   ! pio_rearr_comm_enable_isend_io2comp = .true.
-   ! pio_rearr_comm_max_pend_req_io2comp = 64
-   ! ! set PIO rearranger options
-   ! if (my_task == master_task) write(nu_diag,*) subname// ' calling pio_set_rearr_opts'
-   ! ret = pio_set_rearr_opts(ice_pio_subsystem, pio_rearr_comm_type, &
-   !      pio_rearr_comm_fcd, &
-   !      pio_rearr_comm_enable_hs_comp2io, &
-   !      pio_rearr_comm_enable_isend_comp2io, &
-   !      pio_rearr_comm_max_pend_req_comp2io, &
-   !      pio_rearr_comm_enable_hs_io2comp, &
-   !      pio_rearr_comm_enable_isend_io2comp, &
-   !      pio_rearr_comm_max_pend_req_io2comp)
-   ! if(ret /= PIO_NOERR) then
-   !    call abort_ice(subname//'ERROR: aborting in pio_set_rearr_opts')
-   ! end if
+     call pio_init(my_task, MPI_COMM_ICE, numiotasks, master_task, iostride, rearranger, &
+          ice_pio_subsystem, base=basetask)
+
+     ! TODO
+     !--- initialize rearranger options
+     ! rearranger defaults
+     ! pio_rearr_comm_type = PIO_REARR_COMM_P2P
+     ! pio_rearr_comm_fcd = PIO_REARR_COMM_FC_2D_ENABLE
+     ! pio_rearr_comm_enable_hs_comp2io = .true.
+     ! pio_rearr_comm_enable_isend_comp2io = .false.
+     ! pio_rearr_comm_max_pend_req_comp2io = 0
+     ! pio_rearr_comm_enable_hs_io2comp = .false.
+     ! pio_rearr_comm_enable_isend_io2comp = .true.
+     ! pio_rearr_comm_max_pend_req_io2comp = 64
+     ! ! set PIO rearranger options
+     ! if (my_task == master_task) write(nu_diag,*) subname// ' calling pio_set_rearr_opts'
+     ! ret = pio_set_rearr_opts(ice_pio_subsystem, pio_rearr_comm_type, &
+     !      pio_rearr_comm_fcd, &
+     !      pio_rearr_comm_enable_hs_comp2io, &
+     !      pio_rearr_comm_enable_isend_comp2io, &
+     !      pio_rearr_comm_max_pend_req_comp2io, &
+     !      pio_rearr_comm_enable_hs_io2comp, &
+     !      pio_rearr_comm_enable_isend_io2comp, &
+     !      pio_rearr_comm_max_pend_req_io2comp)
+     ! if(ret /= PIO_NOERR) then
+     !    call abort_ice(subname//'ERROR: aborting in pio_set_rearr_opts')
+     ! end if
 #endif
-   if (present(mode) .and. present(filename) .and. present(File)) then
+     if (present(mode) .and. present(filename) .and. present(File)) then
 
-      if (trim(mode) == 'write') then
-         lclobber = .false.
-         if (present(clobber)) lclobber=clobber
+        if (trim(mode) == 'write') then
+           lclobber = .false.
+           if (present(clobber)) lclobber=clobber
 
-         lcdf64 = .false.
-         if (present(cdf64)) lcdf64=cdf64
+           lcdf64 = .false.
+           if (present(cdf64)) lcdf64=cdf64
 
-         if (File%fh<0) then
-            ! filename not open
-            inquire(file=trim(filename),exist=exists)
-            if (exists) then
-               if (lclobber) then
-                  nmode = pio_clobber
-                  if (lcdf64) nmode = ior(nmode,PIO_64BIT_OFFSET)
-                  status = pio_createfile(ice_pio_subsystem, File, iotype, trim(filename), nmode)
-                  if (my_task == master_task) then
-                     write(nu_diag,*) subname,' create file ',trim(filename)
-                  end if
-               else
-                  nmode = pio_write
-                  status = pio_openfile(ice_pio_subsystem, File, iotype, trim(filename), nmode)
-                  if (my_task == master_task) then
-                     write(nu_diag,*) subname,' open file ',trim(filename)
-                  end if
-               endif
-            else
-               nmode = pio_noclobber
-               if (lcdf64) nmode = ior(nmode,PIO_64BIT_OFFSET)
-               status = pio_createfile(ice_pio_subsystem, File, iotype, trim(filename), nmode)
-               if (my_task == master_task) then
-                  write(nu_diag,*) subname,' create file ',trim(filename)
-               end if
-            endif
-         else
-            ! filename is already open, just return
-         endif
-      end if
+           if (File%fh<0) then
+              ! filename not open
+              inquire(file=trim(filename),exist=exists)
+              if (exists) then
+                 if (lclobber) then
+                    nmode = pio_clobber
+                    if (lcdf64) nmode = ior(nmode,PIO_64BIT_OFFSET)
+                    status = pio_createfile(ice_pio_subsystem, File, iotype, trim(filename), nmode)
+                    if (my_task == master_task) then
+                       write(nu_diag,*) subname,' create file ',trim(filename)
+                    end if
+                 else
+                    nmode = pio_write
+                    status = pio_openfile(ice_pio_subsystem, File, iotype, trim(filename), nmode)
+                    if (my_task == master_task) then
+                       write(nu_diag,*) subname,' open file ',trim(filename)
+                    end if
+                 endif
+              else
+                 nmode = pio_noclobber
+                 if (lcdf64) nmode = ior(nmode,PIO_64BIT_OFFSET)
+                 status = pio_createfile(ice_pio_subsystem, File, iotype, trim(filename), nmode)
+                 if (my_task == master_task) then
+                    write(nu_diag,*) subname,' create file ',trim(filename)
+                 end if
+              endif
+           else
+              ! filename is already open, just return
+           endif
+        end if
 
-      if (trim(mode) == 'read') then
-         inquire(file=trim(filename),exist=exists)
-         if (exists) then
-            status = pio_openfile(ice_pio_subsystem, File, iotype, trim(filename), pio_nowrite)
-         else
-            if(my_task==master_task) then
-               write(nu_diag,*) 'ice_pio_ropen ERROR: file invalid ',trim(filename)
-            end if
-            call abort_ice(subname//'ERROR: aborting with invalid file')
-         endif
-      end if
+        if (trim(mode) == 'read') then
+           inquire(file=trim(filename),exist=exists)
+           if (exists) then
+              status = pio_openfile(ice_pio_subsystem, File, iotype, trim(filename), pio_nowrite)
+           else
+              if(my_task==master_task) then
+                 write(nu_diag,*) 'ice_pio_ropen ERROR: file invalid ',trim(filename)
+              end if
+              call abort_ice(subname//'ERROR: aborting with invalid file')
+           endif
+        end if
 
-   end if
+     end if
 
    end subroutine ice_pio_init
 
