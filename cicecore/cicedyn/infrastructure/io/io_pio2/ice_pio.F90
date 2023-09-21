@@ -126,7 +126,7 @@
      !          write(nu_diag,'(a)') 'WARNING: Rearranger forced to BOX for restart read'
      !       end if
      !    end if
-     end if
+     ! end if
 
      if (trim(pio_options(3)) == '-99') then
         iostride = -99
