@@ -119,13 +119,13 @@
      end if
 
      ! force box rearranger on restart read to avoid some stride+subset combinations
-     if (present(mode)) then
-        if (trim(mode) == 'read') then
-           rearranger = PIO_REARR_BOX
-           if (my_task == master_task) then
-              write(nu_diag,'(a)') 'WARNING: Rearranger forced to BOX for restart read'
-           end if
-        end if
+     ! if (present(mode)) then
+     !    if (trim(mode) == 'read') then
+     !       rearranger = PIO_REARR_BOX
+     !       if (my_task == master_task) then
+     !          write(nu_diag,'(a)') 'WARNING: Rearranger forced to BOX for restart read'
+     !       end if
+     !    end if
      end if
 
      if (trim(pio_options(3)) == '-99') then
