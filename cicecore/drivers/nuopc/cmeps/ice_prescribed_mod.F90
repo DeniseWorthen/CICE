@@ -8,32 +8,15 @@ module ice_prescribed_mod
   ! Regridding and data cycling capabilities are included.
 
   use ESMF, only : ESMF_Clock, ESMF_Mesh, ESMF_SUCCESS, ESMF_FAILURE
+  use ESMF, only : ESMF_GridComp
   use ESMF, only : ESMF_LogFoundError, ESMF_LOGERR_PASSTHRU, ESMF_Finalize, ESMF_END_ABORT
 
-#ifndef CESMCOUPLED
-
   use ice_kinds_mod
-  implicit none
-  private ! except
-  public  :: ice_prescribed_init      ! initialize input data stream
-  logical(kind=log_kind), parameter, public :: prescribed_ice = .false.     ! true if prescribed ice
-contains
-  ! This is a stub routine for now
-  subroutine ice_prescribed_init(clock, mesh, rc)
-    type(ESMF_Clock)       , intent(in)  :: clock
-    type(ESMF_Mesh)        , intent(in)  :: mesh
-    integer                , intent(out) :: rc
-    ! do nothing
-    rc = ESMF_SUCCESS
-  end subroutine ice_prescribed_init
-
-#else
-
-  use ice_kinds_mod
-  use shr_nl_mod       , only : shr_nl_find_group_name
-  use dshr_strdata_mod , only : shr_strdata_type, shr_strdata_print
-  use dshr_strdata_mod , only : shr_strdata_init_from_inline, shr_strdata_advance
-  use dshr_methods_mod , only : dshr_fldbun_getfldptr
+  use shr_nl_mod        , only : shr_nl_find_group_name
+  use dshr_strdata_mod  , only : shr_strdata_type, shr_strdata_print
+  use dshr_strdata_mod  , only : shr_strdata_init_from_inline, shr_strdata_advance
+  use dshr_methods_mod  , only : dshr_fldbun_getfldptr
+  use dshr_mod          , only : dshr_pio_init
   use ice_broadcast
   use ice_communicate   , only : my_task, master_task, MPI_COMM_ICE
   use ice_fileunits
@@ -74,13 +57,14 @@ contains
 contains
 !===============================================================================
 
-  subroutine ice_prescribed_init(clock, mesh, rc)
+  subroutine ice_prescribed_init(gcomp,clock, mesh, rc)
 
     ! Prescribed ice initialization
 
     include 'mpif.h'
 
     ! input/output parameters
+    type(ESMF_GridComp)    , intent(inout) :: gcomp
     type(ESMF_Clock)       , intent(in)  :: clock
     type(ESMF_Mesh)        , intent(in)  :: mesh
     integer                , intent(out) :: rc
@@ -177,7 +161,9 @@ contains
           end do
           write(nu_diag,*) ' '
        endif
-
+#ifndef CESMCOUPLED
+       call dshr_pio_init(gcomp, sdat, nu_diag, rc)
+#endif
        ! initialize sdat
        call shr_strdata_init_from_inline(sdat,               &
             my_task             = my_task,                   &
@@ -195,7 +181,7 @@ contains
             stream_yearLast     = stream_yearLast,           &
             stream_yearAlign    = stream_yearAlign ,         &
             stream_offset       = 0,                         &
-            stream_taxmode      = 'cycle',                   &
+            stream_taxmode      = 'limit',                   &
             stream_dtlimit      = 1.5_dbl_kind,              &
             stream_tintalgo     = 'linear',                  &
             rc                  = rc)
@@ -488,7 +474,5 @@ contains
     call init_flux_ocn
 
   end subroutine ice_prescribed_phys
-
-#endif
 
 end module ice_prescribed_mod

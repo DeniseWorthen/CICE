@@ -861,7 +861,6 @@ contains
        write(nu_diag,'(a    )') trim(subname)//' inst_suffix = ',trim(inst_suffix)
     endif
 
-
     if (write_ic) then
        call accum_hist(dt)  ! write initial conditions
     end if
@@ -870,7 +869,7 @@ contains
     ! Prescribed ice initialization
     !-----------------------------------------------------------------
 
-    call ice_prescribed_init(clock, ice_mesh, rc)
+    call ice_prescribed_init(gcomp,clock, ice_mesh, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
 #ifdef CESMCOUPLED
