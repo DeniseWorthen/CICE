@@ -95,6 +95,7 @@ module ice_comp_nuopc
   logical                      :: profile_memory = .false.
   logical                      :: mastertask
   logical                      :: runtimelog = .false.
+  logical                      :: restart_eor = .false. !End of run restart flag
   integer                      :: start_ymd          ! Start date (YYYYMMDD)
   integer                      :: start_tod          ! start time of day (s)
   integer                      :: curr_ymd           ! Current date (YYYYMMDD)
@@ -315,6 +316,12 @@ contains
     if (isPresent .and. isSet) runtimelog=(trim(cvalue)=="true")
     write(logmsg,*) runtimelog
     call ESMF_LogWrite('CICE_cap:RunTimeLog = '//trim(logmsg), ESMF_LOGMSG_INFO)
+
+    call NUOPC_CompAttributeGet(gcomp, name="write_restart_at_endofrun", value=cvalue, isPresent=isPresent, isSet=isSet, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    if (isPresent .and. isSet) then
+       if (trim(cvalue) .eq. '.true.') restart_eor = .true.
+    endif
 
     !----------------------------------------------------------------------------
     ! generate local mpi comm
@@ -676,8 +683,6 @@ contains
       if(mastertask) write(nu_diag,*) trim(subname)//'WARNING: pio_typename from driver needs to be set for netcdf output to work'
     end if
 
-    
-
 #else
 
     ! Read the cice namelist as part of the call to cice_init1
@@ -843,7 +848,7 @@ contains
     idate0    = start_ymd
     year_init = (idate0/10000)
     month_init= (idate0-year_init*10000)/100           ! integer month of basedate
-    day_init  = idate0-year_init*10000-month_init*100 
+    day_init  = idate0-year_init*10000-month_init*100
 
     !  - Set use_leap_years based on calendar (as some CICE calls use this instead of the calendar type)
     if (calendar_type == ice_calendar_gregorian) then
@@ -1133,6 +1138,8 @@ contains
     call ESMF_ClockGetAlarm(clock, alarmname='alarm_restart', alarm=alarm, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+    force_restart_now = .false.
+
     if (ESMF_AlarmIsRinging(alarm, rc=rc)) then
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
        force_restart_now = .true.
@@ -1146,8 +1153,18 @@ contains
 
        write(restart_date,"(i4.4,a,i2.2,a,i2.2,a,i5.5)") yy, '-', mm, '-',dd,'-',tod
        write(restart_filename,'(4a)') trim(restart_dir), trim(restart_file), '.', trim(restart_date)
-    else
-       force_restart_now = .false.
+    endif
+
+    ! Handle end of run restart
+    if (restart_eor) then
+       call ESMF_ClockGetAlarm(clock, alarmname='alarm_stop', alarm=alarm, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       if (ESMF_AlarmIsRinging(alarm, rc=rc)) then
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
+          force_restart_now = .true.
+          call ESMF_AlarmRingerOff( alarm, rc=rc )
+          if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       endif
     endif
 
     !--------------------------------
