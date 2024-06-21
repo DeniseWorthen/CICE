@@ -320,6 +320,7 @@ contains
     type(ESMF_State)            :: importState
     type(ESMF_State)            :: exportState
     type(ESMF_Field)            :: lfield
+    type(ESMF_VM)               :: vm
     integer                     :: numOwnedElements
     integer                     :: i, j, iblk, n
     integer                     :: ilo, ihi, jlo, jhi ! beginning and end of physical domain
@@ -335,10 +336,17 @@ contains
     real(dbl_kind)              :: max_med2mod_areacor_glob
     real(dbl_kind)              :: min_mod2med_areacor_glob
     real(dbl_kind)              :: min_med2mod_areacor_glob
+    real(dbl_kind)              :: min_areacor(2)
+    real(dbl_kind)              :: max_areacor(2)
+    real(dbl_kind)              :: min_areacor_glob(2)
+    real(dbl_kind)              :: max_areacor_glob(2)
     character(len=*), parameter :: subname='(ice_import_export:realize_fields)'
     !---------------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
+
+    call ESMF_VMGetCurrent(vm, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     call NUOPC_ModelGet(gcomp, importState=importState, exportState=exportState, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
@@ -362,7 +370,7 @@ contains
          tag=subname//':CICE_Import',&
          mesh=mesh, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-#ifdef CESMCOUPLED
+!#ifdef CESMCOUPLED
 
     ! allocate area correction factors
     call ESMF_MeshGet(mesh, numOwnedElements=numOwnedElements, rc=rc)
@@ -413,6 +421,7 @@ contains
        deallocate(mesh_areas)
     end if
 
+#ifdef CESMCOUPLED
     min_mod2med_areacor = minval(mod2med_areacor)
     max_mod2med_areacor = maxval(mod2med_areacor)
     min_med2mod_areacor = minval(med2mod_areacor)
@@ -421,12 +430,27 @@ contains
     call shr_mpi_min(min_mod2med_areacor, min_mod2med_areacor_glob, mpi_comm_ice)
     call shr_mpi_max(max_med2mod_areacor, max_med2mod_areacor_glob, mpi_comm_ice)
     call shr_mpi_min(min_med2mod_areacor, min_med2mod_areacor_glob, mpi_comm_ice)
-
     if (my_task == master_task) then
        write(nu_diag,'(2A,2g23.15,A )') trim(subname),' :  min_mod2med_areacor, max_mod2med_areacor ',&
             min_mod2med_areacor_glob, max_mod2med_areacor_glob, 'CICE6'
        write(nu_diag,'(2A,2g23.15,A )') trim(subname),' :  min_med2mod_areacor, max_med2mod_areacor ',&
             min_med2mod_areacor_glob, max_med2mod_areacor_glob, 'CICE6'
+    end if
+#else
+    min_areacor(1) = minval(mod2med_areacor)
+    max_areacor(1) = maxval(mod2med_areacor)
+    min_areacor(2) = minval(med2mod_areacor)
+    max_areacor(2) = maxval(med2mod_areacor)
+    call ESMF_VMAllReduce(vm, min_areacor, min_areacor_glob, 2, ESMF_REDUCE_MIN, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call ESMF_VMAllReduce(vm, max_areacor, max_areacor_glob, 2, ESMF_REDUCE_MAX, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    if (my_task == master_task) then
+       write(nu_diag,'(2A,2g23.15,A )') trim(subname),' :  min_mod2med_areacor, max_mod2med_areacor ',&
+            min_areacor_glob(1), max_areacor_glob(1), 'CICE6'
+       write(nu_diag,'(2A,2g23.15,A )') trim(subname),' :  min_med2mod_areacor, max_med2mod_areacor ',&
+            min_areacor_glob(2), max_areacor_glob(2), 'CICE6'
     end if
 #endif
 
