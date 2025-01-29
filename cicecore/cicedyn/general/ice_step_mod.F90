@@ -625,6 +625,9 @@
       use ice_state, only: aice, aicen, aice0, trcr_depend, &
           aicen_init, vicen_init, trcrn, vicen, vsnon, &
           trcr_base, n_trcr_strata, nt_strata
+      ! debug
+      use ice_communicate, only: my_task
+      use icepack_therm_shared, only : ijb
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
@@ -664,6 +667,7 @@
          nltrcr = 0
       endif
 
+      !ijb = 0
       this_block = get_block(blocks_ice(iblk),iblk)
       ilo = this_block%ilo
       ihi = this_block%ihi
@@ -674,6 +678,10 @@
       do i = ilo, ihi
 
          if (tmask(i,j,iblk)) then
+            !ijb(1) = this_block%i_glob(i)
+            !ijb(2) = this_block%j_glob(j)
+            !ijb(3) = iblk
+            !print *,'XXX ',my_task,ijb
 
          ! significant wave height for FSD
          if (tr_fsd) &
