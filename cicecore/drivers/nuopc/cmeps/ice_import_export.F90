@@ -583,15 +583,15 @@ contains
              zlvl (i,j,iblk)         = aflds(i,j, 3,iblk)
              ! see below for 4,5,6
              Tair (i,j,iblk)         = aflds(i,j, 7,iblk)
-             Qa   (i,j,iblk)         = aflds(i,j, 8,iblk)
+             Qa   (i,j,iblk) = 0.0
              frzmlt (i,j,iblk)       = aflds(i,j, 9,iblk)
              swvdr(i,j,iblk)         = aflds(i,j,10,iblk)
              swidr(i,j,iblk)         = aflds(i,j,11,iblk)
              swvdf(i,j,iblk)         = aflds(i,j,12,iblk)
              swidf(i,j,iblk)         = aflds(i,j,13,iblk)
              flw  (i,j,iblk)         = aflds(i,j,14,iblk)
-             frain(i,j,iblk)         = aflds(i,j,15,iblk)
-             fsnow(i,j,iblk)         = aflds(i,j,16,iblk)
+             frain(i,j,iblk) = 0.0
+             fsnow(i,j,iblk) = 0.0
           end do
        end do
     end do
