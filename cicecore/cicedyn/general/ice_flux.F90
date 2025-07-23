@@ -368,8 +368,6 @@
       real (kind=dbl_kind), dimension (:,:,:), allocatable, public :: &
          uatmT   , & ! uatm on T grid (m/s)
          vatmT   , & ! vatm on T grid (m/s)
-         rside   , & ! fraction of ice that melts laterally
-         fside   , & ! lateral heat flux (W/m^2)
          wlat    , & ! lateral heat rate (m/s)
          fsw     , & ! incoming shortwave radiation (W/m^2)
          coszen  , & ! cosine solar zenith angle, < 0 for sun below horizon
@@ -377,6 +375,7 @@
          rdg_shear   ! shear term for ridging (1/s)
 
       real (kind=dbl_kind), dimension(:,:,:,:), allocatable, public :: &
+         rsiden    ,&   ! fraction of ice that melts laterally
          salinz    ,&   ! initial salinity  profile (ppt)
          Tmltz          ! initial melting temperature (^oC)
 
@@ -546,13 +545,12 @@
          fsalt_da   (nx_block,ny_block,max_blocks), & ! salt flux to ocean due to data assimilation(kg/m^2/s)
          uatmT      (nx_block,ny_block,max_blocks), & ! uatm on T grid
          vatmT      (nx_block,ny_block,max_blocks), & ! vatm on T grid
-         rside      (nx_block,ny_block,max_blocks), & ! fraction of ice that melts laterally
-         fside      (nx_block,ny_block,max_blocks), & ! lateral melt flux (W/m^2)
          wlat       (nx_block,ny_block,max_blocks), & ! lateral melt rate (m/s)
          fsw        (nx_block,ny_block,max_blocks), & ! incoming shortwave radiation (W/m^2)
          coszen     (nx_block,ny_block,max_blocks), & ! cosine solar zenith angle, < 0 for sun below horizon
          rdg_conv   (nx_block,ny_block,max_blocks), & ! convergence term for ridging (1/s)
          rdg_shear  (nx_block,ny_block,max_blocks), & ! shear term for ridging (1/s)
+         rsiden     (nx_block,ny_block,ncat,max_blocks), & ! fraction of ice that melts laterally
          dardg1ndt  (nx_block,ny_block,ncat,max_blocks), & ! rate of area loss by ridging ice (1/s)
          dardg2ndt  (nx_block,ny_block,ncat,max_blocks), & ! rate of area gain by new ridges (1/s)
          dvirdgndt  (nx_block,ny_block,ncat,max_blocks), & ! rate of ice volume ridged (m/s)
@@ -1211,7 +1209,7 @@
       real (kind=dbl_kind) :: &
           ar, &   ! 1/aice
           stefan_boltzmann, &
-          Tffresh
+          Tffresh, puny
 
       integer (kind=int_kind) :: &
           i, j    ! horizontal indices
@@ -1219,7 +1217,7 @@
       character(len=*), parameter :: subname = '(scale_fluxes)'
 
       call icepack_query_parameters(stefan_boltzmann_out=stefan_boltzmann, &
-         Tffresh_out=Tffresh)
+         Tffresh_out=Tffresh, puny_out=puny)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
          file=__FILE__, line=__LINE__)
@@ -1233,6 +1231,9 @@
             fsens   (i,j) = fsens   (i,j) * ar
             flat    (i,j) = flat    (i,j) * ar
             fswabs  (i,j) = fswabs  (i,j) * ar
+            ! Special case where aice_init was zero and aice > 0.
+            if (flwout(i,j) > -puny) & 
+               flwout  (i,j) = -stefan_boltzmann *(Tf(i,j) + Tffresh)**4
             flwout  (i,j) = flwout  (i,j) * ar
             evap    (i,j) = evap    (i,j) * ar
             Tref    (i,j) = Tref    (i,j) * ar

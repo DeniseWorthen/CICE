@@ -7,6 +7,10 @@ module ice_prescribed_mod
   ! Ice/ocean fluxes are set to zero, and ice dynamics are not calculated.
   ! Regridding and data cycling capabilities are included.
 
+  ! Note (8/8/2024): This code is dependent on CDEPS (to input ice data).
+  ! In the interests of cleaner code, drivers/nuopc/cmeps now is too.
+  ! If problematic, please see https://github.com/CICE-Consortium/CICE/pull/964 for alternatives.
+
   use ESMF, only : ESMF_GridComp, ESMF_Clock, ESMF_Mesh, ESMF_SUCCESS, ESMF_FAILURE
   use ESMF, only : ESMF_LogFoundError, ESMF_LOGERR_PASSTHRU, ESMF_Finalize, ESMF_END_ABORT
 
@@ -211,7 +215,7 @@ contains
        ! If need initial cice values for coupling
        call ice_prescribed_run(idate, msec)
 #endif
-    
+
     end if  ! end of if prescribed ice mode
 
   end subroutine ice_prescribed_init
@@ -442,8 +446,7 @@ contains
                 !--------------------------------------------------------------------
                 ! compute aggregate ice state and open water area
                 !--------------------------------------------------------------------
-                call icepack_aggregate(ncat  = ncat,                  &
-                                       aicen = aicen(i,j,:,iblk),     &
+                call icepack_aggregate(aicen = aicen(i,j,:,iblk),     &
                                        trcrn = trcrn(i,j,1:ntrcr,:,iblk), &
                                        vicen = vicen(i,j,:,iblk),     &
                                        vsnon = vsnon(i,j,:,iblk),     &
@@ -452,7 +455,6 @@ contains
                                        vice  = vice (i,j,  iblk),     &
                                        vsno  = vsno (i,j,  iblk),     &
                                        aice0 = aice0(i,j,  iblk),     &
-                                       ntrcr = ntrcr,                 &
                                        trcr_depend   = trcr_depend(1:ntrcr),   &
                                        trcr_base     = trcr_base(1:ntrcr,:),   &
                                        n_trcr_strata = n_trcr_strata(1:ntrcr), &

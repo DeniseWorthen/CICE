@@ -27,6 +27,7 @@
 
   public ice_pio_init
   public ice_pio_initdecomp
+  public ice_pio_finalize
   public ice_pio_check
 
 #ifdef CESMCOUPLED
@@ -236,8 +237,14 @@
                write(nu_diag,*) subname//' opening file for reading '//trim(filename)
             endif
             status = pio_openfile(ice_pio_subsystem, File, pio_iotype, trim(filename), pio_nowrite)
-            call ice_pio_check( status, subname//' ERROR: Failed to open file '//trim(filename), &
-             file=__FILE__,line=__LINE__)
+            if (status /= PIO_NOERR) then
+               if (my_task == master_task) then
+                  write(nu_diag,*) subname//' opening '//trim(filename)//' as type '//trim(fformat)//' failed, retrying as type cdf1'
+               endif
+               status = pio_openfile(ice_pio_subsystem, File, PIO_IOTYPE_NETCDF, trim(filename), pio_nowrite)
+               call ice_pio_check( status, subname//' ERROR: Failed to open file '//trim(filename), &
+               file=__FILE__,line=__LINE__)
+            endif
          else
             if(my_task==master_task) then
                write(nu_diag,*) subname//' ERROR: file not found '//trim(filename)
@@ -522,6 +529,27 @@
 
    end subroutine ice_pio_initdecomp_4d
 
+
+!================================================================================
+
+   ! PIO Finalize
+
+   subroutine ice_pio_finalize()
+
+      integer(kind=int_kind)      :: status
+      character(len=*), parameter :: subname = '(ice_pio_finalize)'
+
+      status = PIO_NOERR
+#ifndef CESMCOUPLED
+      call pio_seterrorhandling(ice_pio_subsystem, PIO_RETURN_ERROR)
+      call pio_finalize(ice_pio_subsystem,status)
+      call ice_pio_check( status, subname//' ERROR: Failed to finalize ', &
+         file=__FILE__,line=__LINE__)
+! do not call this, ice_pio_subsystem does not exist anymore
+!      call pio_seterrorhandling(ice_pio_subsystem, PIO_INTERNAL_ERROR)
+#endif
+
+   end subroutine ice_pio_finalize
 
 !================================================================================
 

@@ -129,16 +129,25 @@ This is shown in Figure :ref:`fig-Cgrid`.
    Schematic of CICE CD-grid. 
 
 
-The user has several ways to initialize the grid: *popgrid* reads grid
-lengths and other parameters for a nonuniform grid (including tripole
-and regional grids), and *rectgrid* creates a regular rectangular grid.
-The input files **global_gx3.grid** and **global_gx3.kmt** contain the
+The user has several ways to initialize the grid, which can be read from 
+files or created internally. The *rectgrid* code creates a regular rectangular 
+grid (use the namelist option ``grid_type='rectangular'``). The *popgrid* and *popgrid_nc* 
+code reads grid lengths and other parameters for a nonuniform grid (including tripole
+and regional grids). 
+The input files **grid_gx3.bin** and **kmt_gx3.bin** contain the
 :math:`\left<3^\circ\right>` POP grid and land mask;
-**global_gx1.grid** and **global_gx1.kmt** contain the
-:math:`\left<1^\circ\right>` grid and land mask, and **global_tx1.grid** 
-and **global_tx1.kmt** contain the :math:`\left<1^\circ\right>` POP 
+**grid_gx1.bin** and **kmt_gx1.bin** contain the
+:math:`\left<1^\circ\right>` grid and land mask, and **grid_tx1.bin** 
+and **kmt_tx1.bin** contain the :math:`\left<1^\circ\right>` POP 
 tripole grid and land mask. These are binary unformatted, direct access,
-Big Endian files.
+Big Endian files. 
+
+The are also input files in netcdf format for the **gx3** grid,
+(**grid_gx3.nc** and **kmt_gx3.nc**) which can serve as a template for defining
+other grids. At a minimum the grid file needs to to contain ULAT, ULON, HTN, HTE
+and ANGLE variables. If the variables exist, ANGLET, TLON and TLAT will also be 
+read from a netcdf grid file. The kmt (mask) netcdf file needs a variable named 
+kmt or mask, set to 0 for land and 1 for ocean.
 
 The input grid file for the B-grid and CD-grid is identical.  That file
 contains each cells' HTN, HTE, ULON, ULAT, and kmt value.  From those
@@ -213,22 +222,24 @@ ghost cells, and the same numbering system is applied to each of the
 four subdomains.
 
 The user sets the ``NTASKS`` and ``NTHRDS`` settings in **cice.settings** 
-and chooses a block size ``block_size_x`` :math:`\times`\ ``block_size_y``, 
-``max_blocks``, and decomposition information ``distribution_type``, ``processor_shape``, 
-and ``distribution_type`` in **ice_in**. That information is used to
-determine how the blocks are
-distributed across the processors, and how the processors are
-distributed across the grid domain. The model is parallelized over blocks
+and chooses a block size, ``block_size_x`` :math:`\times`\ ``block_size_y``,
+and decomposition information ``distribution_type``, ``processor_shape``, 
+and ``distribution_wgt`` in **ice_in**. 
+This information is used to determine how the blocks are
+distributed across the processors. The model is parallelized over blocks
 for both MPI and OpenMP.  Some suggested combinations for these
 parameters for best performance are given in Section :ref:`performance`.
 The script **cice.setup** computes some default decompositions and layouts
-but the user can overwrite the defaults by manually changing the values in 
-`ice_in`.  At runtime, the model will print decomposition
+but the user can override the defaults by manually changing the values in 
+`ice_in`.  The number of blocks per processor can vary, and this is computed
+internally when the namelist ``max_blocks=-1``.  ``max_blocks``
+can also be set by the user, although this may use extra memory and the
+model will abort if ``max_blocks`` is set too small for the decomposition.
+At runtime, the model will print decomposition
 information to the log file, and if the block size or max blocks is 
 inconsistent with the task and thread size, the model will abort.  The 
 code will also print a warning if the maximum number of blocks is too large. 
-Although this is not fatal, it does use extra memory.  If ``max_blocks`` is
-set to -1, the code will compute a tentative ``max_blocks`` on the fly.
+Although this is not fatal, it does use extra memory.
 
 A loop at the end of routine *create_blocks* in module
 **ice_blocks.F90** will print the locations for all of the blocks on
@@ -1218,7 +1229,10 @@ and (https://github.com/NCAR/ParallelIO).
 netCDF requires CICE compilation with a netCDF library built externally.  
 PIO requires CICE compilation with a PIO and netCDF library built externally.  
 Both netCDF and PIO can be built with many options which may require additional libraries
-such as MPI, hdf5, or pnetCDF.
+such as MPI, hdf5, or pnetCDF.  There are CPPs that will deprecate cdf2,
+cdf5, and hdf5 support should the netcdf library be built without those features.
+Those CPPs are ``NO_CDF2``, ``NO_CDF5``, and ``NO_HDF5``.  Those can be added
+to the Macros machine file explicity when needed.
 
 .. _history:
 
