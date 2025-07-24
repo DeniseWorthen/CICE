@@ -239,7 +239,10 @@
           Qa_iso, Qref_iso, fiso_evap, HDO_ocn, H2_16O_ocn, H2_18O_ocn
       use ice_grid, only: lmask_n, lmask_s, tmask
       use ice_state, only: aice, aicen, aicen_init, vicen_init, &
-          vice, vicen, vsno, vsnon, trcrn, vsnon_init
+           vice, vicen, vsno, vsnon, trcrn, vsnon_init
+      ! debug
+      use ice_communicate, only : my_task
+      use icepack_therm_shared, only : ijb
 #ifdef CICE_IN_NEMO
       use ice_state, only: aice_init
 #endif
@@ -345,7 +348,7 @@
       enddo ! i
       enddo ! j
 #endif
-
+      ijb = 0
       this_block = get_block(blocks_ice(iblk),iblk)
       ilo = this_block%ilo
       ihi = this_block%ihi
@@ -354,6 +357,9 @@
 
       do j = jlo, jhi
       do i = ilo, ihi
+         ijb(1) = this_block%i_glob(i)
+         ijb(2) = this_block%j_glob(j)
+         ijb(3) = iblk
 
          if (snwgrain) then
             do n = 1, ncat
