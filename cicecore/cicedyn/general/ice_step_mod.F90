@@ -248,7 +248,7 @@
           dpnd_dlid, dpnd_flushn, dpnd_exponn, dpnd_freebdn, dpnd_initialn, dpnd_dlidn
       use ice_flux_bgc, only: dsnown, faero_atm, faero_ocn, fiso_atm, fiso_ocn, &
           Qa_iso, Qref_iso, fiso_evap, HDO_ocn, H2_16O_ocn, H2_18O_ocn
-      use ice_grid, only: lmask_n, lmask_s, tmask, opmask
+      use ice_grid, only: lmask_n, lmask_s, tmask, opmask, tarea
       use ice_state, only: aice, aicen, aicen_init, vicen_init, &
           vice, vicen, vsno, vsnon, trcrn, vsnon_init
 #ifdef CICE_IN_NEMO
@@ -289,6 +289,7 @@
       real (kind=dbl_kind) :: &
          floediameter,&     ! single floe diameter (m)
          floediam   , &     ! floe diameter parameter (m)
+         pi         , &     ! pi
          puny               ! a very small number
 
       real (kind=dbl_kind), dimension(n_aero,2,ncat) :: &
@@ -308,6 +309,7 @@
       call icepack_query_parameters(puny_out=puny)
       call icepack_query_parameters(calc_Tsfc_out=calc_Tsfc)
       call icepack_query_parameters(floediam_out=floediam)
+      call icepack_query_parameters(pi_out=pi)
       call icepack_query_parameters(snwgrain_out=snwgrain)
       call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
       call icepack_query_tracer_flags( &
