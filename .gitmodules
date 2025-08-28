@@ -1,3 +1,5 @@
 [submodule "icepack"]
 	path = icepack
-	url = https://github.com/cice-consortium/icepack
+	#url = https://github.com/cice-consortium/icepack
+        url = https://github.com/DeniseWorthen/Icepack.git
+        branch = feature/residual

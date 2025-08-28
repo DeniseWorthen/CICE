@@ -14,7 +14,7 @@
       use ice_kinds_mod
       use ice_blocks, only: block, get_block
       use ice_blocks, only: nx_block, ny_block
-      use ice_constants, only: c0, c1, c1000, c4, p25
+      use ice_constants, only: c0, c1, c2, c1000, c4, p25
       use ice_constants, only: field_loc_center, field_loc_NEcorner, &
           field_loc_Nface, field_loc_Eface, &
           field_type_scalar, field_type_vector
@@ -287,6 +287,8 @@
          tr_iage, tr_FY, tr_iso, tr_aero, calc_Tsfc, snwgrain
 
       real (kind=dbl_kind) :: &
+         floediameter,&     ! single floe diameter (m)
+         floediam   , &     ! floe diameter parameter (m)
          puny               ! a very small number
 
       real (kind=dbl_kind), dimension(n_aero,2,ncat) :: &
@@ -305,6 +307,7 @@
 
       call icepack_query_parameters(puny_out=puny)
       call icepack_query_parameters(calc_Tsfc_out=calc_Tsfc)
+      call icepack_query_parameters(floediam_out=floediam)
       call icepack_query_parameters(snwgrain_out=snwgrain)
       call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
       call icepack_query_tracer_flags( &
@@ -398,6 +401,12 @@
 
          if (tmask(i,j,iblk) .or. opmask(i,j,iblk)) then
 
+         floediameter = floediam
+         !if (1==0) then ! changes answers - implement namelist if useful
+            ! increase lateral melting for floes smaller than floediam
+            floediameter = c2*sqrt(aice(i,j,iblk)*tarea(i,j,iblk)/pi)
+            floediameter = min(floediameter, floediam)
+         !endif
          call icepack_step_therm1(dt=dt,                       &
                       aicen_init   = aicen_init  (i,j,:,iblk), &
                       vicen_init   = vicen_init  (i,j,:,iblk), &
@@ -555,6 +564,7 @@
                       lmask_s      = lmask_s     (i,j,  iblk), &
                       mlt_onset    = mlt_onset   (i,j,  iblk), &
                       frz_onset    = frz_onset   (i,j,  iblk), &
+                      floediameter = floediameter            , &
                       dpnd_flush   = dpnd_flush  (i,j,  iblk), &
                       dpnd_expon   = dpnd_expon  (i,j,  iblk), &
                       dpnd_freebd  = dpnd_freebd (i,j,  iblk), &
