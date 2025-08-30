@@ -250,7 +250,10 @@
           Qa_iso, Qref_iso, fiso_evap, HDO_ocn, H2_16O_ocn, H2_18O_ocn
       use ice_grid, only: lmask_n, lmask_s, tmask, opmask, tarea
       use ice_state, only: aice, aicen, aicen_init, vicen_init, &
-          vice, vicen, vsno, vsnon, trcrn, vsnon_init
+           vice, vicen, vsno, vsnon, trcrn, vsnon_init
+      ! debug
+      use ice_communicate, only : my_task
+      use icepack_therm_shared, only : ijb
 #ifdef CICE_IN_NEMO
       use ice_state, only: aice_init
 #endif
@@ -359,7 +362,7 @@
       enddo ! i
       enddo ! j
 #endif
-
+      ijb = 0
       this_block = get_block(blocks_ice(iblk),iblk)
       ilo = this_block%ilo
       ihi = this_block%ihi
@@ -368,6 +371,9 @@
 
       do j = jlo, jhi
       do i = ilo, ihi
+         ijb(1) = this_block%i_glob(i)
+         ijb(2) = this_block%j_glob(j)
+         ijb(3) = iblk
 
          if (snwgrain) then
             do n = 1, ncat
@@ -665,6 +671,9 @@
       use ice_state, only: aice, aicen, aice0, trcr_depend, &
           aicen_init, vicen_init, trcrn, vicen, vsnon, &
           trcr_base, n_trcr_strata, nt_strata
+      ! debug
+      use ice_communicate, only : my_task
+      use icepack_therm_shared, only : ijb
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
@@ -704,6 +713,7 @@
          nltrcr = 0
       endif
 
+      ijb = 0
       this_block = get_block(blocks_ice(iblk),iblk)
       ilo = this_block%ilo
       ihi = this_block%ihi
@@ -712,9 +722,12 @@
 
       do j = jlo, jhi
       do i = ilo, ihi
+         ijb(1) = this_block%i_glob(i)
+         ijb(2) = this_block%j_glob(j)
+         ijb(3) = iblk
+         !print *,'XXX ',my_task,ijb
 
          if (tmask(i,j,iblk) .or. opmask(i,j,iblk)) then
-
          ! significant wave height for FSD
          if (tr_fsd) &
          wave_sig_ht(i,j,iblk) = c4*SQRT(SUM(wave_spectrum(i,j,:,iblk)*dwavefreq(:)))
