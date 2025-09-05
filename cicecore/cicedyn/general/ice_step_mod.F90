@@ -251,9 +251,9 @@
       use ice_grid, only: lmask_n, lmask_s, tmask, opmask, tarea
       use ice_state, only: aice, aicen, aicen_init, vicen_init, &
           vice, vicen, vsno, vsnon, trcrn, vsnon_init
-#ifdef CICE_IN_NEMO
+!#ifdef CICE_IN_NEMO
       use ice_state, only: aice_init
-#endif
+!#endif
 
 #ifdef CESMCOUPLED
       use ice_prescribed_mod, only: prescribed_ice
@@ -290,6 +290,7 @@
          floediameter,&     ! single floe diameter (m)
          floediam   , &     ! floe diameter parameter (m)
          pi         , &     ! pi
+         rhos, rhoi , &
          puny               ! a very small number
 
       real (kind=dbl_kind), dimension(n_aero,2,ncat) :: &
@@ -309,7 +310,7 @@
       call icepack_query_parameters(puny_out=puny)
       call icepack_query_parameters(calc_Tsfc_out=calc_Tsfc)
       call icepack_query_parameters(floediam_out=floediam)
-      call icepack_query_parameters(pi_out=pi)
+      call icepack_query_parameters(pi_out=pi, rhos_out=rhos, rhoi_out=rhoi)
       call icepack_query_parameters(snwgrain_out=snwgrain)
       call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
       call icepack_query_tracer_flags( &
@@ -406,8 +407,8 @@
          floediameter = floediam
          !if (1==0) then ! changes answers - implement namelist if useful
             ! increase lateral melting for floes smaller than floediam
-            floediameter = c2*sqrt(aice(i,j,iblk)*tarea(i,j,iblk)/pi)
-            floediameter = min(floediameter, floediam)
+            !floediameter = c2*sqrt(aice(i,j,iblk)*tarea(i,j,iblk)/pi)
+            !floediameter = min(floediameter, floediam)
          !endif
          call icepack_step_therm1(dt=dt,                       &
                       aicen_init   = aicen_init  (i,j,:,iblk), &
@@ -567,6 +568,8 @@
                       mlt_onset    = mlt_onset   (i,j,  iblk), &
                       frz_onset    = frz_onset   (i,j,  iblk), &
                       floediameter = floediameter            , &
+                      aice_init    = aice_init   (i,j,  iblk), &
+                      mass = (rhoi*vice(i,j, iblk) + rhos*vsno(i,j, iblk)), &
                       dpnd_flush   = dpnd_flush  (i,j,  iblk), &
                       dpnd_expon   = dpnd_expon  (i,j,  iblk), &
                       dpnd_freebd  = dpnd_freebd (i,j,  iblk), &
