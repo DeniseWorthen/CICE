@@ -59,7 +59,9 @@ module ice_comp_nuopc
 #ifndef CESMCOUPLED
   use shr_is_restart_fh_mod, only : init_is_restart_fh, is_restart_fh, is_restart_fh_type
 #endif
+#ifdef UFS_TRACING
   use ufs_trace_mod
+#endif
 
   implicit none
   private
@@ -142,8 +144,10 @@ contains
     call ESMF_VMGet(vm, localpet=mype, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace_init()
     if (mype == 0) call ufs_trace("cice", "SetServices", "B")
+#endif
 
     ! the NUOPC gcomp component will register the generic methods
     call NUOPC_CompDerive(gcomp, model_routine_SS, rc=rc)
@@ -180,7 +184,9 @@ contains
 
     if (dbug > 5) call ESMF_LogWrite(subname//' done', ESMF_LOGMSG_INFO)
 
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "SetServices", "E")
+#endif
   end subroutine SetServices
 
   !===============================================================================
@@ -199,7 +205,9 @@ contains
     !--------------------------------
 
     rc = ESMF_SUCCESS
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "InitializeP0", "B")
+#endif
 
     ! Switch to IPDv01 by filtering all other phaseMap entries
     call NUOPC_CompFilterPhaseMap(gcomp, ESMF_METHOD_INITIALIZE, &
@@ -214,7 +222,9 @@ contains
     write(logmsg,*) profile_memory
     call ESMF_LogWrite('CICE_cap:ProfileMemory = '//trim(logmsg), ESMF_LOGMSG_INFO)
 
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "InitializeP0", "E")
+#endif
   end subroutine InitializeP0
 
   !===============================================================================
@@ -270,7 +280,9 @@ contains
     character(len=*), parameter :: subname=trim(modName)//':(InitializeAdvertise) '
     !--------------------------------
 
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "InitializeAdvertise", "B")
+#endif
 
     call ufs_settimer(wtime)
 
@@ -782,7 +794,9 @@ contains
 
     call t_stopf ('cice_init_total')
     if (mastertask) call ufs_logtimer(nu_timer,msec,'InitializeAdvertise time: ',runtimelog,wtime)
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "InitializeAdvertise", "E")
+#endif
   end subroutine InitializeAdvertise
 
   !===============================================================================
@@ -816,7 +830,9 @@ contains
     !--------------------------------
 
     rc = ESMF_SUCCESS
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "InitializeRealize", "B")
+#endif
 
     if (dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
 
@@ -1019,7 +1035,9 @@ contains
     call flush_fileunit(nu_diag)
 
     if (mastertask) call ufs_logtimer(nu_timer,msec,'InitializeRealize time: ',runtimelog,wtime)
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "InitializeRealize", "E")
+#endif
   end subroutine InitializeRealize
 
   !===============================================================================
@@ -1068,7 +1086,9 @@ contains
     !--------------------------------
 
     rc = ESMF_SUCCESS
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "ModelAdvance", "B")
+#endif
     if (mastertask) call ufs_logtimer(nu_timer,msec,'ModelAdvance time since last step: ',runtimelog,wtime)
     call ufs_settimer(wtime)
 
@@ -1309,7 +1329,9 @@ contains
     if (dbug > 5) call ESMF_LogWrite(subname//' done', ESMF_LOGMSG_INFO)
 
     if (mastertask) call ufs_logtimer(nu_timer,msec,'ModelAdvance time: ',runtimelog,wtime)
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "ModelAdvance", "E")
+#endif
     call ufs_settimer(wtime)
 
   end subroutine ModelAdvance
@@ -1464,7 +1486,9 @@ contains
     !--------------------------------
 
     rc = ESMF_SUCCESS
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "ModelFinalize", "B")
+#endif
     call ufs_settimer(wtime)
     if (dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
     if (my_task == master_task) then
@@ -1475,7 +1499,9 @@ contains
     if (dbug > 5) call ESMF_LogWrite(subname//' done', ESMF_LOGMSG_INFO)
 
     if(mastertask) call ufs_logtimer(nu_timer,msec,'ModelFinalize time: ',runtimelog,wtime)
+#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace("cice", "ModelFinalize", "E")
+#endif
 
   end subroutine ModelFinalize
 
