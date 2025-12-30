@@ -1083,11 +1083,23 @@ contains
 #endif
     character(len=*),parameter :: subname=trim(modName)//':(ModelAdvance) '
     character(char_len_long)   :: msgString
+    ! debug
+    character(len=1) :: chour
+    integer          :: next_tod      ! model sec into model date
     !--------------------------------
 
     rc = ESMF_SUCCESS
+    call NUOPC_ModelGet(gcomp, modelClock=clock, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call ESMF_ClockGetNextTime(clock, nextTime, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    call ESMF_TimeGet(nextTime, yy=yr, mm=mon, dd=day, s=next_tod, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 #ifdef UFS_TRACING
-    if (mype == 0) call ufs_trace("cice", "ModelAdvance", "B")
+    chour = ''
+    if (mod(next_tod,3600) == 0)chour = '0'
+    if (mype == 0) call ufs_trace("cice", "ModelAdvance"//trim(chour), "B")
+    if (mype == 0) print '(A,4i8,A)','XXX ',yr,mon,day,next_tod,'  '//chour
 #endif
     if (mastertask) call ufs_logtimer(nu_timer,msec,'ModelAdvance time since last step: ',runtimelog,wtime)
     call ufs_settimer(wtime)
@@ -1330,7 +1342,7 @@ contains
 
     if (mastertask) call ufs_logtimer(nu_timer,msec,'ModelAdvance time: ',runtimelog,wtime)
 #ifdef UFS_TRACING
-    if (mype == 0) call ufs_trace("cice", "ModelAdvance", "E")
+    if (mype == 0) call ufs_trace("cice", "ModelAdvance"//trim(chour), "E")
 #endif
     call ufs_settimer(wtime)
 
