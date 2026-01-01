@@ -175,8 +175,13 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_dhdy' )
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_t'    )
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_s'    )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'So_u'    )
-    call fldlist_add(fldsToIce_num, fldsToIce, 'So_v'    )
+    if (grid_ice == 'C') then
+       call fldlist_add(fldsToIce_num, fldsToIce, 'So_uC' )
+       call fldlist_add(fldsToIce_num, fldsToIce, 'So_vC' )
+    else
+       call fldlist_add(fldsToIce_num, fldsToIce, 'So_u'  )
+       call fldlist_add(fldsToIce_num, fldsToIce, 'So_v'  )
+    end if
     call fldlist_add(fldsToIce_num, fldsToIce, 'Fioo_q'  )
     if (flds_wiso) then
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_roce_wiso', ungridded_lbound=1, ungridded_ubound=3)
@@ -659,12 +664,17 @@ contains
     aflds = c0
 
     ! Get velocity fields from ocean and atm and slope fields from ocean
-
-    call state_getimport(importState, 'So_u', output=aflds, index=1, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call state_getimport(importState, 'So_v', output=aflds, index=2, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
+    if (grid_ice == 'C') then
+       call state_getimport(importState, 'So_uC', output=aflds, index=1, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       call state_getimport(importState, 'So_vC', output=aflds, index=2, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    else
+       call state_getimport(importState, 'So_u', output=aflds, index=1, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       call state_getimport(importState, 'So_v', output=aflds, index=2, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    endif
     call state_getimport(importState, 'Sa_u', output=aflds, index=3, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call state_getimport(importState, 'Sa_v', output=aflds, index=4, rc=rc)
@@ -674,7 +684,6 @@ contains
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call state_getimport(importState, 'So_dhdy', output=aflds, index=6, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
 
     if (.not.prescribed_ice) then
        call t_startf ('cice_imp_halo')
@@ -812,23 +821,24 @@ contains
 
        do j = 1,ny_block
           do i = 1,nx_block
-             ! ocean
-             workx      = uocn  (i,j,iblk) ! currents, m/s
-             worky      = vocn  (i,j,iblk)
+             if (grid_ice == 'B') then
+                ! ocean
+                workx      = uocn  (i,j,iblk) ! currents, m/s
+                worky      = vocn  (i,j,iblk)
 
-             uocn(i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! rotate to align with model i,j
-                            + worky*sin(ANGLET(i,j,iblk))
-             vocn(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) &
-                            - workx*sin(ANGLET(i,j,iblk))
-
-             workx      = ss_tltx  (i,j,iblk)           ! sea sfc tilt, m/m
-             worky      = ss_tlty  (i,j,iblk)
-
-             ss_tltx(i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! rotate to align with model i,j
+                uocn(i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! rotate to align with model i,j
                                + worky*sin(ANGLET(i,j,iblk))
-             ss_tlty(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) &
+                vocn(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) &
                                - workx*sin(ANGLET(i,j,iblk))
 
+                workx      = ss_tltx  (i,j,iblk)           ! sea sfc tilt, m/m
+                worky      = ss_tlty  (i,j,iblk)
+
+                ss_tltx(i,j,iblk) = workx*cos(ANGLET(i,j,iblk)) & ! rotate to align with model i,j
+                                   + worky*sin(ANGLET(i,j,iblk))
+                ss_tlty(i,j,iblk) = worky*cos(ANGLET(i,j,iblk)) &
+                                  - workx*sin(ANGLET(i,j,iblk))
+             end if
              sst(i,j,iblk) = sst(i,j,iblk) - Tffresh       ! sea sfc temp (C)
 
              sss(i,j,iblk) = max(sss(i,j,iblk),c0)
