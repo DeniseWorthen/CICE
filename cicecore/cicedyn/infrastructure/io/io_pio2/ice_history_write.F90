@@ -184,9 +184,15 @@
       call ice_pio_initdecomp(ndim3=nzalyr,    iodesc=iodesc3da, precision=history_precision)
       call ice_pio_initdecomp(ndim3=nfsd_hist, iodesc=iodesc3df, precision=history_precision)
       call ice_pio_initdecomp(ndim3=nverts,    iodesc=iodesc3dv, inner_dim=.true., precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nzilyr,    ndim4=ncat_hist, iodesc=iodesc4di, precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nzslyr,    ndim4=ncat_hist, iodesc=iodesc4ds, precision=history_precision)
-      call ice_pio_initdecomp(ndim3=nfsd_hist, ndim4=ncat_hist, iodesc=iodesc4df, precision=history_precision)
+      if (num_avail_hist_fields_4Di > 0) then
+         call ice_pio_initdecomp(ndim3=nzilyr,    ndim4=ncat_hist, iodesc=iodesc4di, precision=history_precision)
+      end if
+      if (num_avail_hist_fields_4Ds > 0) then
+         call ice_pio_initdecomp(ndim3=nzslyr,    ndim4=ncat_hist, iodesc=iodesc4ds, precision=history_precision)
+      end if
+      if (num_avail_hist_fields_4Df > 0) then
+         call ice_pio_initdecomp(ndim3=nfsd_hist, ndim4=ncat_hist, iodesc=iodesc4df, precision=history_precision)
+      end if
 
       ! option of turning on double precision history files
       lprecision = pio_real
@@ -1260,9 +1266,9 @@
       call pio_freedecomp(File,iodesc3db)
       call pio_freedecomp(File,iodesc3da)
       call pio_freedecomp(File,iodesc3df)
-      call pio_freedecomp(File,iodesc4di)
-      call pio_freedecomp(File,iodesc4ds)
-      call pio_freedecomp(File,iodesc4df)
+      if (iodesc4di%ioid /= -1) call pio_freedecomp(File,iodesc4di)
+      if (iodesc4ds%ioid /= -1) call pio_freedecomp(File,iodesc4ds)
+      if (iodesc4df%ioid /= -1) call pio_freedecomp(File,iodesc4df)
 
       !-----------------------------------------------------------------
       ! close output dataset
