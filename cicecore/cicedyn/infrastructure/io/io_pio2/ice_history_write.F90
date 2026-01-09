@@ -1266,9 +1266,9 @@
       call pio_freedecomp(File,iodesc3db)
       call pio_freedecomp(File,iodesc3da)
       call pio_freedecomp(File,iodesc3df)
-      if (iodesc4di%ioid /= -1) call pio_freedecomp(File,iodesc4di)
-      if (iodesc4ds%ioid /= -1) call pio_freedecomp(File,iodesc4ds)
-      if (iodesc4df%ioid /= -1) call pio_freedecomp(File,iodesc4df)
+      if (iodesc4di%ioid > 0) call pio_freedecomp(File,iodesc4di)
+      if (iodesc4ds%ioid > 0) call pio_freedecomp(File,iodesc4ds)
+      if (iodesc4df%ioid > 0) call pio_freedecomp(File,iodesc4df)
 
       !-----------------------------------------------------------------
       ! close output dataset
