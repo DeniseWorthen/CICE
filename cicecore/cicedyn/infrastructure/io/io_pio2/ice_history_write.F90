@@ -184,6 +184,10 @@
       call ice_pio_initdecomp(ndim3=nzalyr,    iodesc=iodesc3da, precision=history_precision)
       call ice_pio_initdecomp(ndim3=nfsd_hist, iodesc=iodesc3df, precision=history_precision)
       call ice_pio_initdecomp(ndim3=nverts,    iodesc=iodesc3dv, inner_dim=.true., precision=history_precision)
+
+      iodesc4di%ioid = 0
+      iodesc4ds%ioid = 0
+      iodesc4df%ioid = 0
       if (num_avail_hist_fields_4Di > 0) then
          call ice_pio_initdecomp(ndim3=nzilyr,    ndim4=ncat_hist, iodesc=iodesc4di, precision=history_precision)
       end if
