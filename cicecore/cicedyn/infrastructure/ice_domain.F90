@@ -517,9 +517,9 @@
       work_per_block = 0
    end where
    if (my_task == master_task) then
-      write(nu_diag,'(2a,4i9)') subname,' work_unit      = ',work_unit, max_work_unit
-      write(nu_diag,'(2a,4i9)') subname,' nocn           = ',minval(nocn),maxval(nocn),sum(nocn)
-      write(nu_diag,'(2a,4i9)') subname,' work_per_block = ',minval(work_per_block),maxval(work_per_block),sum(work_per_block)
+      write(nu_diag,'(2a,4i12)') subname,' work_unit      = ',work_unit, max_work_unit
+      write(nu_diag,'(2a,4i12)') subname,' nocn           = ',minval(nocn),maxval(nocn),sum(nocn)
+      write(nu_diag,'(2a,4i12)') subname,' work_per_block = ',minval(work_per_block),maxval(work_per_block),sum(work_per_block)
    endif
    deallocate(nocn)
 

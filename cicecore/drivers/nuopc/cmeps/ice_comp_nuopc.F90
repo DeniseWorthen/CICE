@@ -1086,6 +1086,7 @@ contains
     ! debug
     character(len=1) :: chour
     integer          :: next_tod      ! model sec into model date
+    integer          :: yr, mon, day
     !--------------------------------
 
     rc = ESMF_SUCCESS
