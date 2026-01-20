@@ -27,7 +27,7 @@ module ice_import_export
   use ice_arrays_column  , only : floe_rad_c, wave_spectrum
   use ice_state          , only : vice, vsno, aice, aicen_init, trcr, trcrn
   use ice_grid           , only : tlon, tlat, tarea, tmask, anglet, hm
-  use ice_grid           , only : grid_format
+  use ice_grid           , only : grid_format, grid_ice
   use ice_mesh_mod       , only : ocn_gridcell_frac
   use ice_boundary       , only : ice_HaloUpdate
   use ice_fileunits      , only : nu_diag, flush_fileunit
