@@ -120,7 +120,9 @@ module ice_comp_nuopc
   character(*), parameter      :: u_FILE_u = &
        __FILE__
 
+#ifdef UFS_TRACING
   integer :: mype = -1
+#endif
 !=======================================================================
 contains
 !===============================================================================
@@ -132,19 +134,22 @@ contains
     integer, intent(out) :: rc
 
     ! Local variables
+#ifdef UFS_TRACING
     type(ESMF_VM)                          :: vm
+#endif
+
     character(len=*),parameter  :: subname=trim(modName)//':(SetServices) '
     !--------------------------------
 
     rc = ESMF_SUCCESS
     if (dbug > 5) call ESMF_LogWrite(subname//' called', ESMF_LOGMSG_INFO)
 
+#ifdef UFS_TRACING
     call ESMF_GridCompGet(gcomp, vm=vm,rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call ESMF_VMGet(vm, localpet=mype, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-#ifdef UFS_TRACING
     if (mype == 0) call ufs_trace_init()
     if (mype == 0) call ufs_trace("cice", "SetServices", "B")
 #endif
@@ -1090,6 +1095,7 @@ contains
     !--------------------------------
 
     rc = ESMF_SUCCESS
+
     call NUOPC_ModelGet(gcomp, modelClock=clock, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call ESMF_ClockGetNextTime(clock, nextTime, rc=rc)
@@ -1100,7 +1106,6 @@ contains
     chour = ''
     if (mod(next_tod,3600) == 0)chour = '0'
     if (mype == 0) call ufs_trace("cice", "ModelAdvance"//trim(chour), "B")
-    !if (mype == 0) print '(A,4i8,A)','XXX ',yr,mon,day,next_tod,'  '//chour
 #endif
     if (mastertask) call ufs_logtimer(nu_timer,msec,'ModelAdvance time since last step: ',runtimelog,wtime)
     call ufs_settimer(wtime)
