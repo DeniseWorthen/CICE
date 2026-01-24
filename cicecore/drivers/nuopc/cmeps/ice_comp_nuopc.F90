@@ -1704,9 +1704,9 @@ contains
     chour = ''
     if (mod(tod, 3600) == 0) chour = '0'
 
-    if (master_task) then
-       print '(A,4i6)','XXX CICE ',year,month,day,tod
-    endif
+    !if (mastertask) then
+    !   print '(A,4i6)','XXX CICE ',year,month,day,tod
+    !endif
   end function get_chour
 
 end module ice_comp_nuopc
