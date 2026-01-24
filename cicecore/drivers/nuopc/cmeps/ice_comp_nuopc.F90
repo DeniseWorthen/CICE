@@ -1088,23 +1088,14 @@ contains
 #endif
     character(len=*),parameter :: subname=trim(modName)//':(ModelAdvance) '
     character(char_len_long)   :: msgString
-    ! debug
-    character(len=1) :: chour
-    integer          :: next_tod      ! model sec into model date
-    integer          :: yr, mon, day
+    character(len=1)           :: chour
     !--------------------------------
 
     rc = ESMF_SUCCESS
 
-    call NUOPC_ModelGet(gcomp, modelClock=clock, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call ESMF_ClockGetNextTime(clock, nextTime, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call ESMF_TimeGet(nextTime, yy=yr, mm=mon, dd=day, s=next_tod, rc=rc)
+    chour = get_chour(gcomp, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 #ifdef UFS_TRACING
-    chour = ''
-    if (mod(next_tod,3600) == 0)chour = '0'
     if (mype == 0) call ufs_trace("cice", "ModelAdvance"//trim(chour), "B")
 #endif
     if (mastertask) call ufs_logtimer(nu_timer,msec,'ModelAdvance time since last step: ',runtimelog,wtime)
@@ -1683,5 +1674,39 @@ contains
     if (year < 0) date = -date
 
   end subroutine ice_cal_ymd2date
+
+  !> Set a string on hour intervals
+  !!
+  !! @param   gcomp  an ESMF_GridComp object
+  !! @param   rc     return code
+  !! @return  chour  character value
+  function get_chour(gcomp, rc) result(chour)
+    type(ESMF_GridComp), intent(in) :: gcomp !< ESMF_GridComp object
+    integer, intent(out)            :: rc    !< return code
+    character(len=1)                :: chour !< output character
+
+    ! local variables
+    type(ESMF_Clock) :: mclock
+    type(ESMF_Time)  :: mcurrTime
+    integer          :: year,month,day,tod
+
+    rc = ESMF_SUCCESS
+
+    call NUOPC_ModelGet(gcomp, modelClock=mclock, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    call ESMF_ClockGet(mclock, currTime=mcurrTime, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    call ESMF_TimeGet(mcurrTime, yy=year, mm=month, dd=day, s=tod, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    chour = ''
+    if (mod(tod, 3600) == 0) chour = '0'
+
+    if (master_task) then
+       print '(A,4i6)','XXX CICE ',year,month,day,tod
+    endif
+  end function get_chour
 
 end module ice_comp_nuopc
