@@ -675,7 +675,6 @@ contains
     call state_getimport(importState, 'So_dhdy', output=aflds, index=6, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-
     if (.not.prescribed_ice) then
        call t_startf ('cice_imp_halo')
        call ice_HaloUpdate(aflds, halo_info, field_loc_center, field_type_vector)
@@ -698,6 +697,10 @@ contains
     !$OMP END PARALLEL DO
 
     deallocate(aflds)
+
+    ! debug
+    ss_tltx = 0.0
+    ss_tlty = 0.0
 
     !-------------------------------------------------------
     ! Get aerosols from mediator
