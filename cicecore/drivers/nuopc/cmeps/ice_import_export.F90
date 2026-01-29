@@ -6,6 +6,7 @@ module ice_import_export
   use ice_kinds_mod      , only : int_kind, dbl_kind, char_len, char_len_long, log_kind
   use ice_constants      , only : c0, c1, spval_dbl, radius
   use ice_constants      , only : field_loc_center, field_type_scalar, field_type_vector
+  use ice_constants      , only : field_loc_Eface, field_loc_Nface
   use ice_blocks         , only : block, get_block, nx_block, ny_block
   use ice_domain         , only : nblocks, blocks_ice, halo_info, distrb_info
   use ice_domain_size    , only : nx_global, ny_global, block_size_x, block_size_y, max_blocks, ncat
