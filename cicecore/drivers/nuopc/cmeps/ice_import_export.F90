@@ -27,7 +27,7 @@ module ice_import_export
   use ice_arrays_column  , only : floe_rad_c, wave_spectrum
   use ice_state          , only : vice, vsno, aice, aicen_init, trcr, trcrn
   use ice_grid           , only : tlon, tlat, tarea, tmask, anglet, hm
-  use ice_grid           , only : grid_format
+  use ice_grid           , only : grid_format, grid_ocn
   use ice_mesh_mod       , only : ocn_gridcell_frac
   use ice_boundary       , only : ice_HaloUpdate
   use ice_fileunits      , only : nu_diag, flush_fileunit
@@ -175,7 +175,7 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_dhdy' )
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_t'    )
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_s'    )
-    if (grid_ice == 'C') then
+    if (grid_ocn == 'C') then
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_uc' )
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_vc' )
     else
@@ -451,6 +451,7 @@ contains
     integer                          :: ilo, ihi, jlo, jhi !beginning and end of physical domain
     type(block)                      :: this_block         ! block information for current block
     real (kind=dbl_kind),allocatable :: aflds(:,:,:,:)
+    real (kind=dbl_kind),allocatable :: worku(:,:,:,:),workv(:,:,:,:),worka(:,:,:,:)
     real (kind=dbl_kind)             :: workx, worky
     real (kind=dbl_kind)             :: MIN_RAIN_TEMP, MAX_SNOW_TEMP
     real (kind=dbl_kind)             :: Tffresh
@@ -658,55 +659,99 @@ contains
        end do !iblk
        !$OMP END PARALLEL DO
     end if
-
     deallocate(aflds)
-    allocate(aflds(nx_block,ny_block,nfldv,nblocks))
-    aflds = c0
 
-    ! Get velocity fields from ocean and atm and slope fields from ocean
-    if (grid_ice == 'C') then
-       call state_getimport(importState, 'So_uc', output=aflds, index=1, rc=rc)
+    if (grid_ocn == 'C') then
+       allocate(worku(nx_block,ny_block,2,nblocks), source=c0)
+       allocate(workv(nx_block,ny_block,2,nblocks), source=c0)
+       allocate(worka(nx_block,ny_block,2,nblocks), source=c0)
+
+       call state_getimport(importState, 'So_uc', output=worku, index=1, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       call state_getimport(importState, 'So_vc', output=aflds, index=2, rc=rc)
+       call state_getimport(importState, 'So_dhdx', output=worku, index=2, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    else
-       call state_getimport(importState, 'So_u', output=aflds, index=1, rc=rc)
+       if (.not.prescribed_ice) then
+          call t_startf ('cice_impE_halo')
+          call ice_HaloUpdate(worku, halo_info, field_loc_Eface, field_type_vector)
+          call t_stopf ('cice_impE_halo')
+       endif
+
+       call state_getimport(importState, 'So_vc', output=workv, index=1, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-       call state_getimport(importState, 'So_v', output=aflds, index=2, rc=rc)
+       call state_getimport(importState, 'So_dhdy', output=workv, index=2, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    endif
-    call state_getimport(importState, 'Sa_u', output=aflds, index=3, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call state_getimport(importState, 'Sa_v', output=aflds, index=4, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       if (.not.prescribed_ice) then
+          call t_startf ('cice_impN_halo')
+          call ice_HaloUpdate(workv, halo_info, field_loc_Nface, field_type_vector)
+          call t_stopf ('cice_impN_halo')
+       endif
 
-    call state_getimport(importState, 'So_dhdx', output=aflds, index=5, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-    call state_getimport(importState, 'So_dhdy', output=aflds, index=6, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       call state_getimport(importState, 'Sa_u', output=worka, index=1, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       call state_getimport(importState, 'Sa_v', output=worka, index=2, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       if (.not.prescribed_ice) then
+          call t_startf ('cice_impA_halo')
+          call ice_HaloUpdate(worka, halo_info, field_loc_center, field_type_vector)
+          call t_stopf ('cice_impA_halo')
+       endif
 
-    if (.not.prescribed_ice) then
-       call t_startf ('cice_imp_halo')
-       call ice_HaloUpdate(aflds, halo_info, field_loc_center, field_type_vector)
-       call t_stopf ('cice_imp_halo')
-    endif
+       !$OMP PARALLEL DO PRIVATE(iblk,i,j)
+       do iblk = 1, nblocks
+          do j = 1,ny_block
+             do i = 1,nx_block
+                uocn (i,j,iblk)   = worku(i,j, 1,iblk)
+                ss_tltx(i,j,iblk) = worku(i,j, 2,iblk)
+                vocn (i,j,iblk)   = workv(i,j, 1,iblk)
+                ss_tlty(i,j,iblk) = workv(i,j, 2,iblk)
+                uatm (i,j,iblk)   = worka(i,j, 1,iblk)
+                vatm (i,j,iblk)   = worka(i,j, 2,iblk)
+             enddo  !i
+          enddo     !j
+       enddo        !iblk
+       !$OMP END PARALLEL DO
+       deallocate(worku,workv,worka)
+      else
+         allocate(aflds(nx_block,ny_block,nfldv,nblocks))
+         aflds = c0
 
-    !$OMP PARALLEL DO PRIVATE(iblk,i,j)
-    do iblk = 1, nblocks
-       do j = 1,ny_block
-          do i = 1,nx_block
-             uocn (i,j,iblk)   = aflds(i,j, 1,iblk)
-             vocn (i,j,iblk)   = aflds(i,j, 2,iblk)
-             uatm (i,j,iblk)   = aflds(i,j, 3,iblk)
-             vatm (i,j,iblk)   = aflds(i,j, 4,iblk)
-             ss_tltx(i,j,iblk) = aflds(i,j, 5,iblk)
-             ss_tlty(i,j,iblk) = aflds(i,j, 6,iblk)
-          enddo  !i
-       enddo     !j
-    enddo        !iblk
-    !$OMP END PARALLEL DO
+         ! Get velocity fields from ocean and atm and slope fields from ocean
+         call state_getimport(importState, 'So_u', output=aflds, index=1, rc=rc)
+         if (ChkErr(rc,__LINE__,u_FILE_u)) return
+         call state_getimport(importState, 'So_v', output=aflds, index=2, rc=rc)
+         if (ChkErr(rc,__LINE__,u_FILE_u)) return
+         call state_getimport(importState, 'Sa_u', output=aflds, index=3, rc=rc)
+         if (ChkErr(rc,__LINE__,u_FILE_u)) return
+         call state_getimport(importState, 'Sa_v', output=aflds, index=4, rc=rc)
+         if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-    deallocate(aflds)
+         call state_getimport(importState, 'So_dhdx', output=aflds, index=5, rc=rc)
+         if (ChkErr(rc,__LINE__,u_FILE_u)) return
+         call state_getimport(importState, 'So_dhdy', output=aflds, index=6, rc=rc)
+         if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+       if (.not.prescribed_ice) then
+          call t_startf ('cice_imp_halo')
+          call ice_HaloUpdate(aflds, halo_info, field_loc_center, field_type_vector)
+          call t_stopf ('cice_imp_halo')
+       endif
+
+       !$OMP PARALLEL DO PRIVATE(iblk,i,j)
+       do iblk = 1, nblocks
+          do j = 1,ny_block
+             do i = 1,nx_block
+                uocn (i,j,iblk)   = aflds(i,j, 1,iblk)
+                vocn (i,j,iblk)   = aflds(i,j, 2,iblk)
+                uatm (i,j,iblk)   = aflds(i,j, 3,iblk)
+                vatm (i,j,iblk)   = aflds(i,j, 4,iblk)
+                ss_tltx(i,j,iblk) = aflds(i,j, 5,iblk)
+                ss_tlty(i,j,iblk) = aflds(i,j, 6,iblk)
+             enddo  !i
+          enddo     !j
+       enddo        !iblk
+       !$OMP END PARALLEL DO
+       deallocate(aflds)
+    end if
 
     !-------------------------------------------------------
     ! Get aerosols from mediator
@@ -821,7 +866,7 @@ contains
 
        do j = 1,ny_block
           do i = 1,nx_block
-             if (grid_ice == 'B') then
+             if (grid_ocn == 'A') then
                 ! ocean
                 workx      = uocn  (i,j,iblk) ! currents, m/s
                 worky      = vocn  (i,j,iblk)
@@ -865,17 +910,15 @@ contains
 #endif
 
     call t_stopf ('cice_imp_ocn')
-
-    ! Interpolate ocean dynamics variables from T-cell centers to
-    ! U-cell centers.
-
-    if (.not.prescribed_ice) then
-       call t_startf ('cice_imp_t2u')
-       call ice_HaloUpdate(uocn, halo_info, field_loc_center, field_type_vector)
-       call ice_HaloUpdate(vocn, halo_info, field_loc_center, field_type_vector)
-       call ice_HaloUpdate(ss_tltx, halo_info, field_loc_center, field_type_vector)
-       call ice_HaloUpdate(ss_tlty, halo_info, field_loc_center, field_type_vector)
-       call t_stopf ('cice_imp_t2u')
+    if (grid_ocn == 'A') then
+       if (.not.prescribed_ice) then
+          call t_startf ('cice_imp_t2u')
+          call ice_HaloUpdate(uocn, halo_info, field_loc_center, field_type_vector)
+          call ice_HaloUpdate(vocn, halo_info, field_loc_center, field_type_vector)
+          call ice_HaloUpdate(ss_tltx, halo_info, field_loc_center, field_type_vector)
+          call ice_HaloUpdate(ss_tlty, halo_info, field_loc_center, field_type_vector)
+          call t_stopf ('cice_imp_t2u')
+       end if
     end if
 
     ! Atmosphere variables are needed in T cell centers in
