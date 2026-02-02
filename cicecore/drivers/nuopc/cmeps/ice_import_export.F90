@@ -176,7 +176,7 @@ contains
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_dhdy' )
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_t'    )
     call fldlist_add(fldsToIce_num, fldsToIce, 'So_s'    )
-    if (grid_ocn == 'C') then
+    if (trim(grid_ocn) == 'C') then
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_uc' )
        call fldlist_add(fldsToIce_num, fldsToIce, 'So_vc' )
     else
@@ -662,7 +662,7 @@ contains
     end if
     deallocate(aflds)
 
-    if (grid_ocn == 'C') then
+    if (trim(grid_ocn) == 'C') then
        allocate(worku(nx_block,ny_block,2,nblocks), source=c0)
        allocate(workv(nx_block,ny_block,2,nblocks), source=c0)
        allocate(worka(nx_block,ny_block,2,nblocks), source=c0)
@@ -703,8 +703,10 @@ contains
              do i = 1,nx_block
                 uocn (i,j,iblk)   = worku(i,j, 1,iblk)
                 ss_tltx(i,j,iblk) = worku(i,j, 2,iblk)
+                !ss_tltx(i,j,iblk) = 0.0
                 vocn (i,j,iblk)   = workv(i,j, 1,iblk)
                 ss_tlty(i,j,iblk) = workv(i,j, 2,iblk)
+                !ss_tlty(i,j,iblk) = 0.0
                 uatm (i,j,iblk)   = worka(i,j, 1,iblk)
                 vatm (i,j,iblk)   = worka(i,j, 2,iblk)
              enddo  !i
@@ -747,6 +749,8 @@ contains
                 vatm (i,j,iblk)   = aflds(i,j, 4,iblk)
                 ss_tltx(i,j,iblk) = aflds(i,j, 5,iblk)
                 ss_tlty(i,j,iblk) = aflds(i,j, 6,iblk)
+                !ss_tltx(i,j,iblk) = 0.0
+                !ss_tlty(i,j,iblk) = 0.0
              enddo  !i
           enddo     !j
        enddo        !iblk
@@ -867,7 +871,7 @@ contains
 
        do j = 1,ny_block
           do i = 1,nx_block
-             if (grid_ocn == 'A') then
+             if (trim(grid_ocn) == 'A') then
                 ! ocean
                 workx      = uocn  (i,j,iblk) ! currents, m/s
                 worky      = vocn  (i,j,iblk)
@@ -911,7 +915,7 @@ contains
 #endif
 
     call t_stopf ('cice_imp_ocn')
-    if (grid_ocn == 'A') then
+    if (trim(grid_ocn) == 'A') then
        if (.not.prescribed_ice) then
           call t_startf ('cice_imp_t2u')
           call ice_HaloUpdate(uocn, halo_info, field_loc_center, field_type_vector)
